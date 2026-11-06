@@ -1,0 +1,1795 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>College Basketball Power Rankings</title>
+<meta name="description" content="Men's college basketball power rankings and season forecast for all 365 Division I teams: Elo ratings in points, preseason priors from KenPom and Bart Torvik, and simulations of conference tournaments and the NCAA tournament. Updated every morning.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23d9732f'/%3E%3Cpath d='M2 16h28M16 2v28M6 6c6 5 6 15 0 20M26 6c-6 5-6 15 0 20' stroke='%231b1c1e' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<script>/* pre-paint theme: saved choice, else the system's */(() => { try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {} })();</script>
+<link rel="stylesheet" href="assets/site.css">
+<script>window.NB_PUBLIC = true; window.NB_DATA = 'data';</script>
+<script src="assets/d3.v7.min.js"></script>
+<script src="assets/dash.js"></script>
+<style>
+#dash-root { --dash-gutter: clamp(12px, 3%, 32px); }
+.nb, .nb *, .nb *::before, .nb *::after { box-sizing: border-box; }  /* fixed column widths assume border-box, here and on the public site */
+.nb {
+  --nb-sans: 'NB Hanken Grotesk', var(--font-anthropic-sans), system-ui, sans-serif;
+  --nb-mono: 'NB JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --nb-heat: var(--cds-chart-categorical-1);
+  container: nb / inline-size;
+  position: relative;
+  max-width: 1360px;
+  margin-inline: auto;
+  font-family: var(--nb-sans);
+  font-size: var(--cds-font-size-body);
+  color: var(--color-fg);
+  font-variant-numeric: tabular-nums;
+}
+.nb [hidden] { display: none !important; }
+.nb .mono, .nb .num, .nb .nb-label { font-family: var(--nb-mono); }
+.nb .nb-head { display: grid; gap: 4px; margin-bottom: var(--cds-gap-md); }
+.nb .nb-title { margin: 0; font-family: var(--nb-sans); font-weight: 650; font-size: calc(var(--cds-font-size-title) * 1.25); letter-spacing: -0.015em; line-height: 1.15; }
+.nb .nb-title .nb-season { color: var(--color-fg-muted); font-weight: 450; }
+.nb .nb-meta { margin: 0; font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); letter-spacing: 0.01em; }
+.nb [data-dash-source-state=empty] { color: transparent; }
+.nb [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+
+/* tabs */
+.nb .nb-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--color-border-line); margin-bottom: var(--cds-gap-md); overflow-x: auto; scrollbar-width: none; }
+.nb .nb-tabs::-webkit-scrollbar { display: none; }
+.nb .nb-tab { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 8px 12px; font: inherit; font-family: var(--nb-sans); font-weight: 550; color: var(--color-fg-muted); cursor: pointer; white-space: nowrap; }
+.nb .nb-tab:hover { color: var(--color-fg); }
+.nb .nb-tab[aria-selected=true] { color: var(--color-fg); border-bottom-color: var(--color-fg); }
+.nb .nb-tab:focus-visible { outline: 2px solid var(--cds-chart-categorical-1); outline-offset: -2px; border-radius: 4px; }
+.nb .nb-page { display: grid; gap: var(--cds-gap-md); }
+
+/* cards */
+.nb .nb-grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); align-items: start; }
+.nb .nb-stack { display: grid; gap: var(--cds-gap-md); min-width: 0; }
+.nb .nb-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: calc(var(--cds-radius) * 1.5); padding: var(--cds-pad-lg); min-width: 0; }
+.nb .nb-card-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; margin-bottom: 10px; }
+.nb .nb-card-title { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); font-family: var(--nb-sans); }
+.nb .nb-card-note { margin: 2px 0 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); max-width: 72ch; }
+.nb .nb-sub { margin: 14px 0 6px; font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-weight: 500; }
+.nb .nb-sub:first-child { margin-top: 0; }
+.nb .nb-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.nb .nb-legend .k { display: inline-flex; align-items: center; gap: 6px; }
+.nb .nb-key { display: inline-block; width: 16px; height: 8px; border-radius: 2px; background: color-mix(in srgb, var(--cds-chart-categorical-1) 28%, transparent); }
+.nb .nb-key.mid { background: color-mix(in srgb, var(--cds-chart-categorical-1) 58%, transparent); }
+.nb .nb-key.dot { width: 8px; border-radius: 50%; background: var(--color-fg); }
+.nb .nb-key.tick { width: 2px; height: 12px; border-radius: 0; background: var(--color-fg-muted); }
+.nb .nb-key.dash { width: 0; height: 12px; border-radius: 0; background: none; border-left: 2px dashed var(--cds-chart-reference); }
+.nb .nb-key.bar { width: 10px; height: 10px; background: var(--cds-chart-categorical-1); }
+.nb .nb-key.ff { width: 18px; height: 12px; border-radius: 4px; background: none; border: 1px dashed var(--color-fg-muted); }
+
+/* segmented control, selects, search */
+.nb .nb-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--color-border-line); border-radius: 999px; padding: 2px; gap: 2px; }
+.nb .nb-seg button { appearance: none; border: 0; background: none; font: inherit; font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: 3px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.nb .nb-seg button:hover { color: var(--color-fg); }
+.nb .nb-seg button[aria-pressed=true] { background: var(--color-fg); color: var(--color-panel); }
+.nb .nb-seg button:focus-visible, .nb .nb-select:focus-visible, .nb .nb-search:focus-visible, .nb .nb-png:focus-visible { outline: 2px solid var(--cds-chart-categorical-1); outline-offset: 1px; }
+.nb .nb-select { font: inherit; font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: 999px; padding: 3px 10px; max-width: 100%; }
+.nb .nb-search { font: inherit; font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: 999px; padding: 4px 12px; width: 12.5rem; max-width: 100%; }
+.nb .nb-search::placeholder { color: var(--color-fg-muted); opacity: 1; }
+.nb .nb-search::-webkit-calendar-picker-indicator { display: none !important; }
+
+/* tables */
+.nb .nb-scroll { overflow-x: auto; min-width: 0; }
+.nb .nb-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.nb .nb-table th { font-family: var(--nb-mono); font-weight: 500; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); text-align: left; padding: 6px 6px; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; vertical-align: bottom; }
+.nb .nb-table td { padding: 5px 6px; border-bottom: 1px solid color-mix(in srgb, var(--color-border-line) 60%, transparent); white-space: nowrap; vertical-align: middle; }
+.nb .nb-table tbody tr:last-child td { border-bottom: 0; }
+.nb .nb-table tbody tr:hover td { background: color-mix(in srgb, var(--color-fg) 4%, transparent); }
+.nb .nb-table .num { text-align: right; font-size: 12.5px; }
+.nb .nb-table th.num { text-align: right; }
+.nb .nb-table .muted { color: var(--color-fg-muted); }
+.nb .nb-table td.note { white-space: normal; min-width: 12rem; font-size: 12px; line-height: 1.35; }
+.nb .nb-table .up { color: var(--color-ok); }
+.nb .nb-table .down { color: var(--color-bad); }
+.nb .nb-sort { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; display: inline-flex; gap: 3px; align-items: center; }
+.nb .nb-sort:hover { color: var(--color-fg); }
+.nb th[aria-sort] .nb-sort { color: var(--color-fg); }
+.nb th[aria-sort=ascending] .nb-sort::after { content: '\2191'; }
+.nb th[aria-sort=descending] .nb-sort::after { content: '\2193'; }
+.nb .nb-team { display: inline-flex; align-items: center; gap: 8px; font-weight: 550; vertical-align: middle; line-height: 20px; }
+.nb .nb-logo { width: 20px; height: 20px; flex: none; object-fit: contain; }
+.nb.nb-dark img.glow { filter: drop-shadow(0 0 1px rgba(255, 255, 255, .5)); }  /* a logo with no dark variant stays visible, no white disc */
+.nb .nb-chip { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; border: 1.5px solid var(--cds-chart-muted); }
+.nb .nb-nologo { width: 20px; height: 20px; flex: none; display: inline-block; }
+.nb .nb-team.nd { font-weight: 450; color: var(--color-fg-muted); }
+.nb .nb-best { font-weight: 700; }
+.nb .nb-rank { font-weight: 600; color: var(--color-fg); }
+.nb .orank { font-family: var(--nb-mono); font-size: 10px; color: var(--color-fg-muted); margin-left: 6px; }
+
+/* rankings: 50 teams a page as two halves of 25 side by side (1–25 | 26–50), one list when narrower; the Conference
+   view is one table. Calm rows: theme text colours, a faint team-colour wash (--tc) and the logo, no bars. */
+.nb .nb-rk-head { margin-bottom: 8px; align-items: center; }
+.nb .nb-rk-ctl, .nb .nb-rk-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.nb .nb-pages-sel { display: none; }
+.nb .nb-png { appearance: none; border: 1px solid var(--color-border-line); background: none; border-radius: 999px; font: inherit; font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: 3px 10px; cursor: pointer; }
+.nb .nb-png:hover { color: var(--color-fg); }
+/* PNG export card: the current view's tables on a fixed dark board (built off-screen on click, then removed) */
+.nb .nb-x { --x-bg: #0d0f13; --x-row: #12151a; --x-hair: #1f232b; --x-rule: #4a515c; --x-fg: #eceef1; --x-mute: #8d939e;
+  position: fixed; left: -100000px; top: 0; width: max-content; background: var(--x-bg); color: var(--x-fg); padding: 20px 20px 18px; border-radius: 12px; font-family: var(--nb-sans); }
+.nb .nb-x-cols { display: grid; grid-template-columns: repeat(var(--cols, 2), max-content); gap: 0 14px; align-items: start; }
+.nb .nb-x-t { border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+.nb .nb-x-t th { padding: 0 10px 8px; font-family: var(--nb-mono); font-weight: 500; font-size: 11px; color: var(--x-mute); text-align: center; border-bottom: 1px solid var(--x-rule); }
+.nb .nb-x-t th.l { text-align: left; }
+.nb .nb-x-t td { height: 40px; padding: 0 10px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--x-hair); background: color-mix(in srgb, var(--tc, transparent) 22%, var(--x-row)); }
+.nb .nb-x-t td.rk { padding-left: 14px; text-align: right; font-family: var(--nb-mono); font-size: 13px; color: var(--x-mute); width: 20px; }
+.nb .nb-x-t td.chg { font-family: var(--nb-mono); font-size: 11.5px; width: 30px; padding: 0 4px; }
+.nb .nb-x-t td.chg.up { color: #3ccf74; } .nb .nb-x-t td.chg.down { color: #f05a63; } .nb .nb-x-t td.chg.flat { color: var(--x-mute); }
+.nb .nb-x-t td.lg { width: 28px; padding: 0 4px 0 6px; }
+.nb .nb-x-t td.lg img { width: 26px; height: 26px; max-width: none; object-fit: contain; display: block; }
+.nb .nb-x-t td.tm { text-align: left; font-size: 15px; font-weight: 650; letter-spacing: .01em; padding-right: 16px; }
+.nb .nb-x-t td.tm .rec { margin-left: 7px; font-family: var(--nb-mono); font-size: 12px; font-weight: 400; letter-spacing: 0; color: var(--x-mute); }
+.nb .nb-x-t td.n { font-family: var(--nb-mono); font-size: 13px; color: #f4f5f7; border-left: 1px solid var(--x-hair); }
+.nb .nb-x-t td.n.pos { color: #6fe39a; } .nb .nb-x-t td.n.neg { color: #ff8189; }
+.nb .nb-rk-wrap { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.nb .nb-rk { table-layout: fixed; font-size: 12px; }
+.nb .nb-rk th, .nb .nb-rk td { padding: 0 4px; }
+.nb .nb-rk th { padding-bottom: 6px; padding-top: 2px; font-family: var(--nb-sans); font-size: 11px; }
+.nb .nb-rk td { height: 34px; border-bottom: 1px solid color-mix(in srgb, var(--color-border-line) 55%, transparent); overflow: hidden; }
+.nb .nb-rk .num { font-size: 11px; }
+.nb .nb-rk tbody tr { cursor: pointer; }
+.nb .nb-rk tbody td { background: color-mix(in srgb, var(--tc, transparent) var(--tint, 8%), transparent); }  /* a faint wash of the team colour */
+.nb.nb-dark .nb-rk tbody td { --tint: 15%; }
+.nb .nb-rk tbody td:first-child, .nb .nb-rk thead th:first-child { padding-left: 8px; }
+.nb .nb-rk tbody tr:hover td, .nb .nb-rk tbody tr:focus-within td { --tint: 16%; }
+.nb.nb-dark .nb-rk tbody tr:hover td, .nb.nb-dark .nb-rk tbody tr:focus-within td { --tint: 24%; }
+.nb .nb-rk th.num { direction: rtl; }  /* a header wider than its column spills left, over the gap, not into the next one */
+.nb .nb-rk th.num > * { direction: ltr; }
+.nb .nb-rk .c-chg { width: 30px; font-size: 10px; text-align: left; }
+.nb .nb-rk td.c-chg.up { color: var(--color-ok); }
+.nb .nb-rk td.c-chg.down { color: var(--color-bad); }
+.nb .nb-rk td.c-chg.flat { color: var(--color-fg-muted); font-weight: 400; }
+.nb .nb-rk .c-rank { width: 30px; }
+.nb .nb-rk td.c-rank { font-weight: 600; }
+.nb .nb-rk .c-team { width: 150px; }
+.nb .nb-rk .nb-team { font-weight: 600; gap: 7px; max-width: 100%; overflow: hidden; }
+.nb .nb-rk .nb-team > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb .nb-badge { width: 20px; height: 20px; display: grid; place-items: center; flex: none; }
+.nb .nb-badge .nb-logo { width: 19px; height: 19px; }
+.nb .nb-rk .rec { font-weight: 400; font-size: 11px; color: var(--color-fg-muted); margin-left: 4px; }
+.nb .short { display: none; }
+.nb .nb-rk .c-rating { width: 54px; }
+.nb .nb-rk td.c-rating { font-weight: 650; font-size: 11.5px; }
+.nb .nb-rk .c-last { padding-left: 12px; font-size: 11px; color: var(--color-fg-muted); text-overflow: ellipsis; white-space: nowrap; }
+.nb .nb-rk .c-last b { font-weight: 600; color: var(--color-fg); }
+.nb .nb-rk .c-next { width: 64px; font-size: 11px; }
+.nb .nb-rk td.c-next { color: var(--color-fg); text-overflow: ellipsis; white-space: nowrap; }
+.nb .nb-rk .c-proj { width: 48px; }
+.nb .nb-rk .c-sos { width: 80px; }
+.nb .nb-rk .rk { font-family: var(--nb-sans); font-size: 9.5px; font-weight: 600; color: var(--rkc, var(--color-fg-muted)); margin-left: 3px; display: inline-block; min-width: 2.9em; text-align: left; }
+.nb .nb-rk .c-p { width: 52px; }
+.nb .nb-rk td.c-p { padding-left: 6px; }
+.nb .nb-rk th.c-p { padding-right: 6px; }
+.nb .nb-rk .c-seed { width: 40px; }
+.nb .nb-rk tbody td.c-chg, .nb .nb-rk thead th.c-chg { padding-left: 6px; padding-right: 0; }
+/* Conference view: one table, every column sized (spare width is shared out in proportion) */
+.nb .nb-cf .c-team { width: 168px; }
+.nb .nb-cf .c-conf { width: 50px; }
+.nb .nb-cf .c-rating { width: 58px; }
+.nb .nb-cf .c-last { width: 136px; }
+.nb .nb-cf .c-next { width: 76px; }
+.nb .nb-cf .c-proj { width: 66px; }
+.nb .nb-cf .c-p { width: 70px; }
+@container nb (min-width: 1180px) {
+  .nb .nb-rk-wrap.halves { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; }
+  .nb #rankings-card { padding-inline: 12px; }
+  .nb .nb-rk-h .c-chg { width: 28px; }
+  .nb .nb-rk-h .c-rank { width: 28px; }
+  .nb .nb-rk-h .c-team { width: 136px; }
+  .nb .nb-rk-h .c-rating { width: 50px; }
+  .nb .nb-rk-h .c-last { padding-left: 10px; }
+  .nb .nb-rk-h .c-next { width: 58px; }
+  .nb .nb-rk-h .c-proj { width: 42px; }
+  .nb .nb-rk-h .c-sos { width: 38px; }
+  .nb .nb-rk-h .c-sos .v { display: none; }  /* two halves: SOS/SOR as coloured ranks only; the value is the tooltip */
+  .nb .nb-rk-h .c-sos .rk { margin-left: 0; min-width: 0; font-size: 10px; }
+  .nb .nb-rk-h .c-p { width: 44px; }
+  .nb .nb-rk-h .c-seed { width: 36px; }
+}
+@container nb (min-width: 1180px) and (max-width: 1340px) {  /* two halves on a laptop: tighter columns so Last keeps its room */
+  .nb .nb-rk-h .c-chg { width: 26px; }
+  .nb .nb-rk-h .c-team { width: 92px; }
+  .nb .nb-rk-h .full { display: none; }
+  .nb .nb-rk-h .short { display: inline; }
+  .nb .nb-rk-h .c-sos { width: 36px; }
+  .nb .nb-rk-h .c-seed { display: none; }  /* Seed waits for a wider screen (the Tournament tab has it) */
+}
+@container nb (max-width: 1179.98px) {
+  .nb .nb-rk-2 thead { display: none; }
+  .nb .nb-rk-1 tbody tr:last-child td { border-bottom: 1px solid color-mix(in srgb, var(--color-border-line) 55%, transparent); }
+}
+
+/* projected field: seed lines of four, S-curve order, Opening Round pairs dashed */
+.nb .nb-fl { display: grid; gap: 5px; }
+.nb .nb-fl-line { display: grid; grid-template-columns: 24px repeat(4, minmax(0, 1fr)); gap: 5px 6px; align-items: stretch; }
+.nb .nb-fl-seed { font-family: var(--nb-mono); font-size: 12px; font-weight: 650; color: var(--color-fg-muted); display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; }
+.nb .nb-fc { display: grid; gap: 3px; min-width: 0; align-content: center; }
+.nb .nb-fc.pair { border: 1px dashed color-mix(in srgb, var(--color-fg-muted) 70%, transparent); border-radius: 8px; padding: 3px; }
+.nb .nb-fr { display: flex; align-items: center; gap: 8px; min-width: 0; height: 32px; padding: 0 9px 0 7px; border-radius: 6px; font-size: 12.5px; background: color-mix(in srgb, var(--tc, transparent) var(--tint, 9%), transparent); }
+.nb .nb-fc.pair .nb-fr { height: 27px; }
+.nb.nb-dark .nb-fr { --tint: 16%; }
+.nb .nb-fr .nb-team { min-width: 0; flex: 1 1 auto; font-weight: 600; gap: 7px; }
+.nb .nb-fr .nb-team > span:last-child, .nb .nb-fr .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb .nb-fr .cf { font-family: var(--nb-mono); font-size: 10px; color: var(--color-fg-muted); white-space: nowrap; flex: none; }
+.nb .nb-fr .pm { font-family: var(--nb-mono); font-size: 11.5px; white-space: nowrap; flex: none; min-width: 3.4em; text-align: right; }
+
+/* bubble and title odds */
+.nb .nb-bt td { height: 30px; }
+.nb .nb-bt tbody td { background: color-mix(in srgb, var(--tc, transparent) var(--tint, 7%), transparent); }
+.nb.nb-dark .nb-bt tbody td { --tint: 13%; }
+.nb .nb-bt tbody tr.grp th { padding: 12px 6px 4px; font-family: var(--nb-mono); font-weight: 500; font-size: var(--cds-font-size-caption); color: var(--color-fg); border-bottom: 1px solid var(--color-border-line); text-align: left; background: none; }
+.nb .nb-bt tbody:first-of-type tr.grp th { padding-top: 6px; }
+.nb .nb-bt tbody tr.grp:hover th { background: none; }
+.nb .nb-bt .rk { font-family: var(--nb-sans); font-size: 10px; font-weight: 600; color: var(--rkc, var(--color-fg-muted)); }
+.nb .nb-bt .rec { font-weight: 400; font-size: 11px; color: var(--color-fg-muted); margin-left: 4px; }
+.nb .nb-bt .nb-team { font-weight: 600; gap: 7px; }
+
+/* heat table */
+.nb .nb-heat td.h { text-align: center; font-size: 10.5px; padding: 4px 2px; min-width: 46px; font-family: var(--nb-mono); border-bottom: 1px solid var(--color-panel); border-right: 1px solid var(--color-panel); }
+.nb .nb-heat td.h.zero { color: var(--color-fg-muted); opacity: .45; }
+.nb .nb-heat td.h.hi { color: #fff; }
+.nb .nb-heat th.h { text-align: center; padding: 6px 2px; }
+.nb .nb-heat td.gap, .nb .nb-heat th.gap { padding: 0; width: 8px; min-width: 8px; border: 0; background: none !important; }
+.nb .nb-heat tbody tr:hover td.h { outline: 1px solid var(--color-fg); outline-offset: -1px; }
+.nb .nb-heat .sticky { position: sticky; left: 0; background: var(--color-panel); z-index: 1; }
+.nb .nb-heat tbody tr:hover td.sticky { background: var(--color-panel); }
+.nb .nb-heat td.tmc { height: 30px; }
+.nb .nb-heat .rec { font-weight: 400; font-size: 11px; color: var(--color-fg-muted); margin-left: 4px; }
+
+/* charts */
+.nb .nb-chart { position: relative; min-width: 0; }
+.nb .nb-chart svg { display: block; overflow: visible; }
+.nb .nb-chart text { font-family: var(--nb-mono); }
+.nb .nb-axis text { fill: var(--color-fg-muted); font-size: 10.5px; }
+.nb .nb-axis line, .nb .nb-axis path { stroke: var(--cds-chart-axis); }
+.nb .nb-grid-l line { stroke: var(--cds-chart-grid); }
+.nb .nb-grid-l path { display: none; }
+.nb .nb-failed { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.nb .nb-failed::before { content: ''; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+.nb .nb-empty-note { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); margin: 4px 0; }
+
+/* games: today's slate grouped by tip time, a compact grid of games */
+.nb .nb-slot + .nb-slot { margin-top: 16px; }
+.nb .nb-slot-h { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--color-border-line); font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); font-weight: 500; color: var(--color-fg-muted); }
+.nb .nb-slot-h b { color: var(--color-fg); font-weight: 600; }
+.nb .nb-gms { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 212px), 1fr)); }
+.nb .nb-gm { border: 1px solid var(--color-border-line); border-radius: 8px; padding: 5px 10px 6px 6px; display: grid; gap: 1px; min-width: 0; }
+.nb .nb-gm .row { display: flex; align-items: center; gap: 6px; height: 25px; min-width: 0; font-size: 12.5px; }
+.nb .nb-gm .row .nb-team { flex: 1 1 auto; min-width: 0; gap: 7px; font-weight: 550; }
+.nb .nb-gm .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb .nb-gm .rk { font-family: var(--nb-mono); font-size: 10px; color: var(--color-fg-muted); width: 2.5em; text-align: right; flex: none; }
+.nb .nb-gm .pv { font-family: var(--nb-mono); font-size: 12px; flex: none; margin-left: auto; }
+.nb .nb-gm .fav .pv, .nb .nb-gm .win .pv, .nb .nb-gm .win .nm { font-weight: 700; }
+.nb .nb-gm.fin .row:not(.win) .nm, .nb .nb-gm.fin .row:not(.win) .pv { color: var(--color-fg-muted); }
+.nb .nb-gm .bar { display: flex; gap: 2px; height: 3px; margin: 3px 0 0 calc(2.5em + 6px); border-radius: 2px; overflow: hidden; }
+.nb .nb-gm .bar i { display: block; height: 100%; background: var(--cds-chart-muted); }
+.nb .nb-gm .bar i.fav { background: var(--cds-chart-categorical-1); }
+.nb .nb-gm .ft { display: flex; justify-content: space-between; gap: 8px; margin: 4px 0 0 calc(2.5em + 6px); font-family: var(--nb-mono); font-size: 10.5px; color: var(--color-fg-muted); white-space: nowrap; }
+.nb .nb-gm .ft .lv { color: var(--color-bad); font-weight: 600; }
+.nb .nb-gm .ft > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+
+/* model */
+.nb .nb-vcell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.nb .nb-vbar { position: relative; width: clamp(40px, 8cqw, 90px); height: 6px; flex: none; }
+.nb .nb-vbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--cds-chart-muted); }
+.nb .nb-prose { font-size: var(--cds-font-size-body); line-height: 1.55; max-width: 78ch; }
+.nb .nb-prose p { margin: 0 0 8px; }
+.nb .nb-prose ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.nb .nb-prose .mono { font-size: 0.92em; }
+
+/* tooltip */
+.nb .nb-tip { position: absolute; z-index: 10; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); font-family: var(--nb-mono); white-space: nowrap; display: none; color: var(--color-fg); }
+.nb .nb-tip .t { color: var(--cds-text-secondary); margin-bottom: 2px; font-family: var(--nb-sans); }
+.nb .nb-tip .r { display: flex; gap: 10px; justify-content: space-between; }
+
+/* team links */
+.nb .nb-tlink { cursor: pointer; border-radius: 3px; }
+.nb .nb-tlink:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.nb .nb-tlink:focus-visible { outline: 2px solid var(--cds-chart-categorical-1); outline-offset: 1px; }
+.nb svg .nb-tlink:hover { text-decoration: underline; }
+
+/* team page */
+.nb .nb-grid3 { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); align-items: stretch; }
+.nb .nb-grid2 { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr)); align-items: start; }
+.nb .nb-thead { border-top: 4px solid var(--nb-team, var(--color-fg)); padding-top: calc(var(--cds-pad-lg) - 2px); }
+.nb .nb-th-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; }
+.nb .nb-th-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.nb .nb-th-logo { width: 56px; height: 56px; flex: none; display: grid; place-items: center; }
+.nb .nb-th-logo img { width: 56px; height: 56px; object-fit: contain; }
+.nb .nb-th-logo .nb-chip { width: 28px; height: 28px; }
+.nb .nb-th-name { margin: 0; font-family: var(--nb-sans); font-weight: 650; font-size: calc(var(--cds-font-size-title) * 1.1); letter-spacing: -0.012em; line-height: 1.15; }
+.nb .nb-th-sub { margin: 3px 0 0; font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.nb .nb-th-pick { display: flex; align-items: center; gap: 6px; }
+.nb .nb-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: 12px 18px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--color-border-line); }
+.nb .nb-tile { min-width: 0; }
+.nb .nb-tile .k { font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.nb .nb-tile .v { font-family: var(--nb-sans); font-weight: 600; font-size: 26px; line-height: 1.2; letter-spacing: -0.01em; margin-top: 2px; white-space: nowrap; }
+.nb .nb-tile .v small { font-size: 13px; font-weight: 500; color: var(--color-fg-muted); letter-spacing: 0; }
+.nb .nb-tile .s { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: 2px; line-height: 1.35; }
+.nb .nb-tile .s .up { color: var(--color-ok); }
+.nb .nb-tile .s .down { color: var(--color-bad); }
+.nb .nb-path { display: grid; grid-template-columns: max-content minmax(40px, 1fr) 3.7rem; gap: 7px 10px; align-items: center; font-size: 12.5px; }
+.nb .nb-path .lab { white-space: nowrap; }
+.nb .nb-path .trk { position: relative; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--color-fg) 6%, transparent); overflow: hidden; }
+.nb .nb-path .trk i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--cds-chart-categorical-1); }
+.nb .nb-path .trk.fin i { background: color-mix(in srgb, var(--cds-chart-categorical-1) 45%, transparent); }
+.nb .nb-path .val { text-align: right; font-family: var(--nb-mono); font-size: 12px; }
+.nb .nb-path .grp { grid-column: 1 / -1; font-family: var(--nb-mono); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: 6px; }
+.nb .nb-path .grp:first-child { margin-top: 0; }
+.nb .nb-tall { max-height: 460px; overflow: auto; }
+.nb .nb-tall thead th { position: sticky; top: 0; background: var(--color-panel); z-index: 1; }
+.nb .nb-wl { font-weight: 650; }
+.nb .nb-wl.w { color: var(--color-ok); }
+.nb .nb-wl.l { color: var(--color-bad); }
+.nb .nb-live { font-family: var(--nb-mono); font-size: 11px; font-weight: 600; color: var(--color-bad); }
+.nb .nb-summary { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0 0 8px; }
+.nb .nb-summary b { color: var(--color-fg); font-weight: 600; }
+.nb .nb-card-head .nb-summary { margin: 2px 0 0; font-family: var(--nb-mono); }
+.nb .nb-hint { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.nb th[title] { cursor: help; }
+
+/* narrow */
+.nb .nb-show-xs { display: none; }
+@container nb (max-width: 980px) {
+  .nb .nb-hide-md { display: none; }
+  .nb .nb-rk .c-team { width: 112px; }
+  .nb .nb-cf .c-team { width: 132px; }
+  .nb .nb-cf .c-last { width: 116px; }
+  .nb .nb-cf .c-next { width: 64px; }
+  .nb .nb-cf .c-p { width: 60px; }
+}
+@container nb (max-width: 760px) {
+  .nb .nb-fl-line { grid-template-columns: 22px repeat(2, minmax(0, 1fr)); }
+  .nb .nb-fl-seed { grid-row: span 2; }
+}
+@container nb (max-width: 720px) {
+  .nb .nb-hide-sm { display: none; }
+  .nb .nb-rk .full { display: none; }
+  .nb .nb-rk .short { display: inline; }
+  .nb .nb-rk .c-team, .nb .nb-cf .c-team { width: 96px; }
+  .nb .nb-rk .c-chg { width: 28px; }
+  .nb .nb-rk .c-rank { width: 28px; }
+  .nb .nb-rk .c-rating { width: 50px; }
+  .nb .nb-rk .c-next { width: 56px; }
+  .nb .nb-rk .c-proj { width: 44px; }
+  .nb .nb-rk .c-p { width: 48px; }
+  .nb .nb-pages { display: none; }
+  .nb .nb-pages-sel { display: inline-block; }
+  .nb .nb-cf .c-conf { width: 44px; }
+  .nb .nb-cf .c-p { width: 56px; }
+}
+@container nb (max-width: 520px) {
+  .nb .nb-hide-xs { display: none; }
+  .nb .nb-show-xs { display: table-cell; }
+  .nb .nb-card { padding: 10px; }
+  .nb .nb-table { font-size: 12px; }
+  .nb .nb-table td, .nb .nb-table th { padding: 5px 4px; }
+  .nb .nb-table .num { font-size: 11.5px; }
+  .nb .nb-team { gap: 5px; }
+  .nb .nb-rk td, .nb .nb-rk th { padding-left: 3px; padding-right: 3px; }
+  .nb .nb-rk tbody td:first-child, .nb .nb-rk thead th:first-child { padding-left: 7px; }
+  .nb .nb-rk .num { font-size: 11px; }
+  .nb .nb-rk .nb-team { gap: 5px; }
+  .nb .nb-rk .c-chg { width: 30px; }
+  .nb .nb-rk .c-rank { width: 26px; }
+  .nb .nb-rk .c-rating, .nb .nb-cf .c-rating { width: 48px; }
+  .nb .nb-rk .c-team, .nb .nb-cf .c-team { width: 94px; }
+  .nb .nb-rk .c-proj { width: 46px; }
+  .nb .nb-rk .c-p, .nb .nb-cf .c-p { width: 48px; }
+  .nb .nb-cf .c-conf { width: 40px; }
+  .nb .nb-rk td.c-p { padding-left: 4px; }
+  .nb .nb-rk th.c-p { padding-right: 4px; }
+  .nb .nb-logo { width: 18px; height: 18px; }
+  .nb .nb-tabs { flex-wrap: wrap; overflow: visible; }
+  .nb .nb-tab { padding: 6px 9px; }
+  .nb .nb-tile .v { font-size: 22px; }
+  .nb .nb-th-logo, .nb .nb-th-logo img { width: 44px; height: 44px; }
+  .nb .nb-th-pick, .nb .nb-th-pick .nb-select { width: 100%; }
+  .nb .nb-search { width: 100%; }
+  .nb .nb-rk-tools { flex: 1 1 100%; }
+  .nb .nb-rk-tools .nb-search { flex: 1 1 auto; width: auto; }
+  .nb .nb-fr .full, .nb .nb-heat .full, .nb .nb-heat .rec { display: none; }
+  .nb .nb-fr .short, .nb .nb-heat .short { display: inline; }
+  .nb .nb-fr { padding: 0 6px 0 5px; gap: 5px; }
+  .nb .nb-fr .cf { font-size: 9px; }
+  .nb .nb-fl-line { gap: 4px; }
+  .nb .nb-gms { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }  /* games two abreast on a phone, by team code */
+  .nb .nb-gm { padding: 4px 6px 5px 3px; }
+  .nb .nb-gm .row { gap: 4px; font-size: 12px; }
+  .nb .nb-gm .full { display: none; }
+  .nb .nb-gm .short { display: inline; }
+  .nb .nb-gm .rk { width: 2.2em; }
+  .nb .nb-gm .bar, .nb .nb-gm .ft { margin-left: calc(2.2em + 4px); }
+  .nb .nb-gm .ft { font-size: 10px; }
+}
+@container nb (max-width: 380px) {  /* 360 px phones: the same columns, tighter */
+  .nb .nb-card { padding: 8px; }
+  .nb .nb-rk td, .nb .nb-rk th { padding-left: 2px; padding-right: 2px; }
+  .nb .nb-rk tbody td:first-child, .nb .nb-rk thead th:first-child { padding-left: 4px; }
+  .nb .nb-rk .num, .nb .nb-rk td.c-rating { font-size: 10.5px; }
+  .nb .nb-rk .c-chg { width: 24px; }
+  .nb .nb-rk .c-rank { width: 24px; }
+  .nb .nb-rk .c-team, .nb .nb-cf .c-team { width: 82px; }
+  .nb .nb-rk .c-rating, .nb .nb-cf .c-rating { width: 44px; }
+  .nb .nb-rk .c-proj { width: 40px; }
+  .nb .nb-rk .c-p, .nb .nb-cf .c-p { width: 42px; }
+  .nb .nb-cf .c-conf { width: 38px; }
+  .nb .nb-rk td.c-p { padding-left: 2px; }
+  .nb .nb-rk .rec { font-size: 10px; margin-left: 3px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nb .nb-fade { animation: nb-in var(--cds-dur-slow) var(--cds-ease-out) both; }
+  @keyframes nb-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+}
+</style>
+</head>
+<body>
+<button class="theme-toggle" type="button" aria-label="Switch light or dark theme" title="Theme">&#9680;</button>
+<div data-appifact-content><div id="dash-root">
+<div class="nb" id="nb">
+  <header class="nb-head" id="overview">
+    <h1 class="nb-title" id="title">College basketball power rankings <span class="nb-season"><span data-source="run" data-field="season" data-row="0" class="dash-skeleton">—</span></span></h1>
+    <p class="nb-meta" id="run-line">Updated <span data-source="run" data-field="as_of" data-row="0" class="dash-skeleton">—</span></p>
+  </header>
+
+  <nav class="nb-tabs" role="tablist" id="tabs" aria-label="Pages">
+    <button class="nb-tab" role="tab" id="tab-rankings" data-tab="rankings" aria-controls="pg-rankings">Rankings</button>
+    <button class="nb-tab" role="tab" id="tab-tournament" data-tab="tournament" aria-controls="pg-tournament">Tournament</button>
+    <button class="nb-tab" role="tab" id="tab-games" data-tab="games" aria-controls="pg-games">Games</button>
+    <button class="nb-tab" role="tab" id="tab-team" data-tab="team" aria-controls="pg-team">Teams</button>
+    <button class="nb-tab" role="tab" id="tab-model" data-tab="model" aria-controls="pg-model">Model</button>
+  </nav>
+
+  <!-- 1. Rankings -->
+  <section class="nb-page" id="pg-rankings" role="tabpanel" aria-labelledby="tab-rankings">
+    <div class="nb-card" id="rankings-card">
+      <div class="nb-card-head nb-rk-head">
+        <div class="nb-rk-ctl">
+          <div class="nb-seg" id="view-seg" role="group" aria-label="View"><button data-view="league">League</button><button data-view="conf">Conference</button></div>
+          <div class="nb-seg nb-pages" id="page-seg" role="group" aria-label="Teams shown"></div>
+          <select class="nb-select nb-pages-sel" id="page-sel" aria-label="Teams shown"></select>
+          <select class="nb-select" id="conf-pick" aria-label="Conference" hidden></select>
+        </div>
+        <div class="nb-rk-tools">
+          <input class="nb-search" id="team-search" type="search" placeholder="Find a team" list="team-list" aria-label="Find a team" autocomplete="off" spellcheck="false">
+          <datalist id="team-list"></datalist>
+          <button class="nb-png" id="rk-png" title="Download this view as a PNG">PNG</button>
+        </div>
+      </div>
+      <div class="nb-rk-wrap halves" id="rankings-wrap" data-source="logos">
+        <table class="nb-table nb-rk nb-rk-h nb-rk-1" id="rankings-table" data-source="teams" data-row-key="abbr">
+          <thead><tr>
+            <th class="c-chg" data-field="rank_d1" data-sort="rank_d1"><button class="nb-sort" title="Rank change since the last game day" aria-label="Rank change since the last game day">±</button></th>
+            <th class="num c-rank" data-field="rank" data-sort="rank"><button class="nb-sort">#</button></th>
+            <th class="c-team" data-field="short" data-sort="name"><button class="nb-sort">Team</button></th>
+            <th class="num c-rating" data-field="rating" data-sort="rating"><button class="nb-sort" title="Points vs an average D1 team (0); +5 = favoured by 5 on a neutral court"><span class="full">Rating</span><span class="short">Rtg</span></button></th>
+            <th class="c-last nb-hide-xs" data-field="last_game" title="Latest result"><span>Last</span></th>
+            <th class="c-next nb-hide-xs" data-field="next_game" title="Today's game (tomorrow's once today's slate is final)"><span>Next</span></th>
+            <th class="num c-proj" data-source="derived" data-field="proj_record" data-sort="proj_w"><button class="nb-sort" title="Projected regular-season record: mean of the simulations (conference and NCAA tournament games not included)">Proj.</button></th>
+            <th class="num c-sos nb-hide-sm" data-field="sos" data-sort="sos"><button class="nb-sort" title="Remaining schedule strength: remaining opponents' mean rating; 1st = hardest">SOS</button></th>
+            <th class="num c-sos nb-hide-sm" data-field="sor" data-sort="sor"><button class="nb-sort" title="Strength of record: wins above what a bubble team would expect in the same games; 1st = best">SOR</button></th>
+            <th class="num c-p" data-field="p_ncaa" data-sort="p_ncaa"><button class="nb-sort" title="Chance to make the NCAA tournament">NCAA</button></th>
+            <th class="num c-seed nb-hide-md" data-field="mean_seed" data-sort="mean_seed"><button class="nb-sort" title="Average NCAA seed when in the field">Seed</button></th>
+            <th class="num c-p" data-field="p_title" data-sort="p_title"><button class="nb-sort" title="Chance to win the national title">Title</button></th>
+          </tr></thead>
+          <tbody class="dash-skeleton"></tbody>
+        </table>
+        <table class="nb-table nb-rk nb-rk-h nb-rk-2" id="rankings-table-2" data-source="teams" data-row-key="abbr"><thead></thead><tbody class="dash-skeleton"></tbody></table>
+      </div>
+      <div class="nb-rk-wrap" id="conf-wrap" data-source="logos" hidden>
+        <table class="nb-table nb-rk nb-cf" id="conf-table" data-source="teams" data-row-key="abbr">
+          <thead><tr>
+            <th class="c-chg" data-field="rank_d1" data-sort="rank_d1"><button class="nb-sort" title="Rank change since the last game day" aria-label="Rank change since the last game day">±</button></th>
+            <th class="num c-rank" data-field="rank" data-sort="rank"><button class="nb-sort" title="National rank">#</button></th>
+            <th class="c-team" data-field="short" data-sort="name"><button class="nb-sort">Team</button></th>
+            <th class="num c-conf" data-source="derived" data-field="conf_record" data-sort="cw"><button class="nb-sort" title="Conference record">Conf</button></th>
+            <th class="num c-rating" data-field="rating" data-sort="rating"><button class="nb-sort" title="Points vs an average D1 team (0); +5 = favoured by 5 on a neutral court"><span class="full">Rating</span><span class="short">Rtg</span></button></th>
+            <th class="c-last nb-hide-xs" data-field="last_game" title="Latest result"><span>Last</span></th>
+            <th class="c-next nb-hide-sm" data-field="next_game" title="Today's game (tomorrow's once today's slate is final)"><span>Next</span></th>
+            <th class="num c-proj nb-hide-md" data-source="derived" data-field="proj_conf" data-sort="proj_cw"><button class="nb-sort" title="Projected conference record: mean of the simulations">Proj. conf</button></th>
+            <th class="num c-p" data-field="p_conf_reg" data-sort="p_conf_reg"><button class="nb-sort" title="Chance to finish first in the conference standings"><span class="full">Reg. season</span><span class="short">Reg.</span></button></th>
+            <th class="num c-p nb-hide-xs" data-field="p_conf_tourney" data-sort="p_conf_tourney"><button class="nb-sort" title="Chance to win the conference tournament">Tourney</button></th>
+            <th class="num c-p" data-field="p_ncaa" data-sort="p_ncaa"><button class="nb-sort" title="Chance to make the NCAA tournament">NCAA</button></th>
+            <th class="num c-p nb-hide-md" data-field="p_title" data-sort="p_title"><button class="nb-sort" title="Chance to win the national title">Title</button></th>
+          </tr></thead>
+          <tbody class="dash-skeleton"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Tournament -->
+  <section class="nb-page" id="pg-tournament" role="tabpanel" aria-labelledby="tab-tournament" hidden>
+    <div class="nb-card" id="field-card">
+      <div class="nb-card-head">
+        <div><h2 class="nb-card-title" id="field-title">Projected field</h2></div>
+        <div class="nb-legend" id="field-legend"><span class="k">% = chance to make it</span><span class="k"><span>ACC</span> projected automatic bid</span><span class="k"><i class="nb-key ff"></i>Opening Round</span></div>
+      </div>
+      <div class="dash-skeleton" id="field" data-source="field teams logos" style="min-height: 560px"></div>
+    </div>
+    <div class="nb-grid">
+      <div class="nb-card" id="odds-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="odds-title">Title odds</h2></div></div>
+        <div class="nb-scroll" data-source="logos"><table class="nb-table nb-heat" id="odds-table" data-source="teams" data-row-key="abbr">
+          <thead><tr>
+            <th class="sticky" data-field="short">Team</th>
+            <th class="num" data-field="mean_seed" title="Average seed when in the field">Seed</th>
+            <th class="h" data-field="p_r32" title="Reach the round of 32">R32</th>
+            <th class="h" data-field="p_s16" title="Reach the Sweet 16">S16</th>
+            <th class="h" data-field="p_e8" title="Reach the Elite Eight">E8</th>
+            <th class="h" data-field="p_f4" title="Reach the Final Four">F4</th>
+            <th class="h" data-field="p_final" title="Reach the final">Final</th>
+            <th class="h" data-field="p_title" title="Win the title">Title</th>
+          </tr></thead>
+          <tbody class="dash-skeleton"></tbody></table></div>
+      </div>
+      <div class="nb-stack">
+        <div class="nb-card" id="bubble-card">
+          <div class="nb-card-head"><div><h2 class="nb-card-title" id="bubble-title">Bubble</h2></div></div>
+          <div class="nb-scroll" data-source="field logos"><table class="nb-table nb-bt" id="bubble-table" data-source="teams" data-row-key="abbr">
+            <thead><tr><th data-field="short">Team</th><th class="nb-hide-xs" data-field="conf">Conf</th><th class="num" data-field="rating">Rating</th><th class="num" data-field="sor_rank" title="Strength of record rank">SOR</th><th class="num" data-source="field" data-field="p_at" title="Chance of an at-large bid when it misses its conference's automatic bid">At-large</th></tr></thead>
+            <tbody id="bub-1" class="dash-skeleton"></tbody><tbody id="bub-2"></tbody><tbody id="bub-3"></tbody>
+          </table></div>
+        </div>
+        <div class="nb-card" id="bids-card">
+          <div class="nb-card-head"><div><h2 class="nb-card-title" id="bids-title">Bids by conference</h2></div><p class="nb-summary">Expected NCAA teams</p></div>
+          <div class="nb-chart dash-skeleton" id="bids" data-source="conf_bids" style="min-height: 220px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Games -->
+  <section class="nb-page" id="pg-games" role="tabpanel" aria-labelledby="tab-games" hidden>
+    <div class="nb-card" id="games-card">
+      <div class="nb-card-head"><div><h2 class="nb-card-title" id="games-title">Today's games</h2></div><p class="nb-summary" id="games-sum"></p></div>
+      <div class="dash-skeleton" id="slate" data-source="schedule teams logos" style="min-height: 240px"></div>
+    </div>
+  </section>
+
+  <!-- 4. Team -->
+  <section class="nb-page" id="pg-team" role="tabpanel" aria-labelledby="tab-team" hidden>
+    <div class="nb-card nb-thead" id="team-head" data-source="logos">
+      <div class="nb-th-top">
+        <div class="nb-th-id">
+          <span class="nb-th-logo" id="team-logo"></span>
+          <div>
+            <h2 class="nb-th-name" id="team-name"><span class="tm dash-skeleton" data-source="teams" data-field="name">—</span> <span class="tm" data-source="teams" data-field="nickname">—</span></h2>
+            <p class="nb-th-sub"><span class="tm" data-source="teams" data-field="conf_name">—</span> · <span class="tm" data-source="derived" data-field="record">—</span> · <span class="tm" data-source="derived" data-field="conf_record">—</span> in conference</p>
+          </div>
+        </div>
+        <label class="nb-th-pick"><select class="nb-select" id="team-pick" aria-label="Team" data-source="teams"></select></label>
+      </div>
+      <div class="nb-tiles" id="team-tiles">
+        <div class="nb-tile" id="tile-rating"><div class="k">Rating</div><div class="v"><span class="tm" data-source="teams" data-field="rating">—</span></div><div class="s"><span class="tm" data-source="teams" data-field="rank">—</span> · <span class="tm" data-source="teams" data-field="rating_d7">—</span> in 7 days</div></div>
+        <div class="nb-tile" id="tile-proj"><div class="k">Proj. W–L</div><div class="v"><span class="tm" data-source="teams" data-field="proj_w">—</span>–<span class="tm" data-source="teams" data-field="proj_l">—</span></div><div class="s" title="10th to 90th percentile of simulated wins">80%: <span class="tm" data-source="teams" data-field="w_p10">—</span>–<span class="tm" data-source="teams" data-field="w_p90">—</span> wins</div></div>
+        <div class="nb-tile" id="tile-conf"><div class="k">Conference</div><div class="v"><span class="tm" data-source="teams" data-field="proj_cw">—</span>–<span class="tm" data-source="teams" data-field="proj_cl">—</span></div><div class="s">Title <span class="tm" data-source="teams" data-field="p_conf_reg">—</span> · Tourney <span class="tm" data-source="teams" data-field="p_conf_tourney">—</span></div></div>
+        <div class="nb-tile" id="tile-ncaa"><div class="k">NCAA</div><div class="v"><span class="tm" data-source="teams" data-field="p_ncaa">—</span></div><div class="s"><span id="ncaa-in">Seed <span class="tm" data-source="teams" data-field="mean_seed">—</span> · Title <span class="tm" data-source="teams" data-field="p_title">—</span></span><span id="ncaa-out" hidden>Not eligible this season</span></div></div>
+        <div class="nb-tile" id="tile-pre"><div class="k">Preseason</div><div class="v"><span class="tm" data-source="teams" data-field="rating_prior">—</span></div><div class="s"><span id="pre-kp" title="KenPom preseason efficiency margin, points per 100 possessions">KenPom <span class="tm" data-source="teams" data-field="pre_kenpom">—</span></span><span id="pre-sep"> · </span><span id="pre-tv" title="Torvik preseason efficiency margin, points per 100 possessions">Torvik <span class="tm" data-source="teams" data-field="pre_torvik">—</span></span><span class="nb-unit"> /100 poss.</span></div></div>
+        <div class="nb-tile" id="tile-sos"><div class="k" title="Remaining schedule strength (remaining opponents' mean rating) and strength of record (wins above a bubble team's expectation so far), national ranks">SOS · SOR</div><div class="v"><span class="tm" data-source="teams" data-field="sos_rank">—</span> <small>·</small> <span class="tm" data-source="teams" data-field="sor_rank">—</span></div><div class="s"><span class="tm" data-source="teams" data-field="sos">—</span> · <span class="tm" data-source="teams" data-field="sor">—</span></div></div>
+      </div>
+    </div>
+
+    <div class="nb-grid3">
+      <div class="nb-card" id="team-wins-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="team-wins-title">Wins</h2></div></div>
+        <div class="nb-chart dash-skeleton" id="team-wins" data-source="win_dist teams" style="min-height: 210px"></div>
+      </div>
+      <div class="nb-card" id="team-path-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="team-path-title">Tournament path</h2></div></div>
+        <div class="dash-skeleton" id="team-path" data-source="teams" style="min-height: 210px"></div>
+      </div>
+      <div class="nb-card" id="team-seeds-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="team-seeds-title">NCAA seed</h2></div></div>
+        <div class="nb-chart dash-skeleton" id="team-seeds" data-source="teams" style="min-height: 210px"></div>
+      </div>
+    </div>
+
+    <div class="nb-grid2">
+      <div class="nb-card" id="team-history-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="team-history-title">Rating</h2></div></div>
+        <div class="nb-chart dash-skeleton" id="team-history" data-source="history teams" style="min-height: 250px"></div>
+      </div>
+      <div class="nb-card" id="team-slate-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="team-slate-title">Games left</h2></div><p class="nb-summary" id="team-slate-sum"><b class="tm" data-source="slate" data-field="left">—</b> left · <b class="tm" data-source="slate" data-field="exp_w">—</b> exp. W</p></div>
+        <div class="nb-chart dash-skeleton" id="team-slate" data-source="team_games" style="min-height: 150px"></div>
+        <div class="nb-legend" style="margin-top: 6px"><span class="k"><i class="nb-key bar"></i>Home</span><span class="k"><i class="nb-key mid"></i>Neutral</span><span class="k"><i class="nb-key"></i>Away</span><span class="k"><i class="nb-key tick" style="background: var(--color-fg); width: 12px; height: 2px"></i>5-game avg</span></div>
+      </div>
+    </div>
+
+    <div class="nb-grid2">
+      <div class="nb-card" id="team-results-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="team-results-title">Results</h2></div></div>
+        <div class="nb-scroll nb-tall" data-source="logos"><table class="nb-table" id="team-results" data-source="team_games" data-row-key="id,abbr">
+          <thead><tr><th data-field="date">Date</th><th data-field="ha"></th><th data-field="opp">Opponent</th><th data-field="result">Result</th><th class="num" data-field="score">Score</th><th class="num nb-hide-xs" data-field="p_win" title="Pregame win chance">Pregame</th><th class="num" data-field="delta" title="Rating change from the game">Δ</th></tr></thead>
+          <tbody class="dash-skeleton"></tbody></table></div>
+      </div>
+      <div class="nb-card" id="team-left-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="team-left-title">Schedule</h2></div></div>
+        <div class="nb-scroll nb-tall" data-source="logos"><table class="nb-table" id="team-left" data-source="team_games" data-row-key="id,abbr">
+          <thead><tr><th data-field="date">Date</th><th class="nb-hide-xs" data-field="tip">ET</th><th data-field="ha"></th><th data-field="opp">Opponent</th><th class="num" data-field="p_win">Win</th><th class="num" data-field="spread" title="This team's spread; negative = favoured">Spread</th></tr></thead>
+          <tbody class="dash-skeleton"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Model -->
+  <section class="nb-page" id="pg-model" role="tabpanel" aria-labelledby="tab-model" hidden>
+    <div class="nb-card" id="model-about">
+      <h2 class="nb-card-title" id="model-title">How the model works</h2>
+      <div class="nb-prose" style="margin-top: 8px">
+        <ul>
+          <li><strong>Ratings.</strong> Published in points against an average D1 team: 0 is average, and on a neutral court a +10 team is favoured by 10 points over an average one. A game's spread is the difference of the two ratings plus home court and the other context terms. The engine runs in Elo underneath; one point is <span class="mono" data-source="run" data-field="elo_per_point" data-row="0">—</span> Elo.</li>
+          <li><strong>Priors.</strong> With 360-odd teams there are no Vegas season lines to start from, so each team opens from last season's final rating pulled toward its conference's level, preseason efficiency margins from KenPom and Bart Torvik, or a blend; a team new to D1 starts from a fitted level. Best in testing: <span id="prior-best" data-source="priors">—</span>.</li>
+          <li><strong>Updates.</strong> After every game between two D1 teams both sides move by K × a margin-of-victory multiplier × (result − expected). Margins are capped, so blowouts stop counting past the cap, and an autocorrelation term shrinks the multiplier when a favourite wins big. Games against non-D1 opponents count in the record but move no ratings.</li>
+          <li><strong>Game context.</strong> Home court shifts a game's expected result (not at neutral sites). Each other factor was tested by leave-one-season-out fits and stays in only if it lowers held-out log loss. In: <span id="ctx-kept" data-source="params">—</span>. Out: <span id="ctx-dropped" data-source="params">—</span>.</li>
+          <li><strong>Forecast.</strong> The rest of the schedule is played <span class="mono" data-source="run" data-field="n_sims" data-row="0">—</span> times with ratings updating game by game, then every conference tournament from its own bracket, the NCAA selection (automatic bids, then at-large teams by rating and strength of record), S-curve seeding with the Opening Round (the 76-team field from 2027), and the bracket.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="nb-card" id="priors-card">
+      <div class="nb-card-head"><div><h2 class="nb-card-title" id="priors-title">Priors tested</h2><p class="nb-card-note">Each way of setting the preseason ratings, scored on the same games; Δ is against the best.</p></div></div>
+      <div class="nb-scroll"><table class="nb-table" id="priors-table" data-source="priors" data-row-key="prior">
+        <thead><tr><th data-field="prior">Prior</th><th class="nb-hide-xs" data-field="seasons">Seasons</th><th class="num nb-hide-xs" data-field="games">Games</th><th class="num" data-field="logloss">Log loss</th><th class="num" data-field="d_logloss">Δ vs best</th><th class="nb-hide-sm" data-field="note">Note</th></tr></thead>
+        <tbody class="dash-skeleton"></tbody></table></div>
+    </div>
+    <div class="nb-grid">
+      <div class="nb-card" id="backtest-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="backtest-title">Backtest</h2><p class="nb-card-note">Pregame win probabilities against results, games between D1 teams. Lower log loss and Brier are better; the best on each split is bold.</p></div></div>
+        <div class="nb-scroll"><table class="nb-table" id="backtest-table" data-source="backtest" data-row-key="model,split">
+          <thead><tr><th data-field="model">Model</th><th data-field="split">Split</th><th class="nb-hide-xs" data-field="seasons">Seasons</th><th class="num nb-hide-xs" data-field="games">Games</th><th class="num" data-field="logloss">Log loss</th><th class="num" data-field="brier">Brier</th><th class="num" data-field="acc">Accuracy</th></tr></thead>
+          <tbody class="dash-skeleton"></tbody></table></div>
+      </div>
+      <div class="nb-card" id="calibration-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="calibration-title">Calibration</h2><p class="nb-card-note">Test split: predicted home win chance against how often the home team won. Dot size is the number of games.</p></div></div>
+        <div class="nb-chart dash-skeleton" id="calibration-chart" data-source="calibration" style="min-height: 300px"></div>
+      </div>
+    </div>
+    <div class="nb-grid">
+      <div class="nb-card" id="params-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="params-title">Core parameters</h2><p class="nb-card-note">Fitted on past seasons; rating-scale values in points.</p></div></div>
+        <div class="nb-scroll"><table class="nb-table" id="params-core" data-source="params" data-row-key="key">
+          <thead><tr><th data-field="label">Parameter</th><th class="num" data-field="value">Value</th><th data-field="unit">Unit</th><th class="nb-hide-xs" data-field="note">Note</th></tr></thead>
+          <tbody class="dash-skeleton"></tbody></table></div>
+      </div>
+      <div class="nb-card" id="factors-card">
+        <div class="nb-card-head"><div><h2 class="nb-card-title" id="factors-title">Factors tested</h2><p class="nb-card-note">Change in log loss per game when the factor is added; negative helps. Held-out: averaged over leave-one-season-out fits on the training seasons, and it alone decides Kept. Better in: how many held-out seasons improved. Test: the same comparison on the test seasons, which played no part in the choice.</p></div></div>
+        <div class="nb-scroll"><table class="nb-table" id="params-factors" data-source="params" data-row-key="key">
+          <thead><tr><th data-field="label">Factor</th><th class="num" data-field="value">Value</th><th class="nb-hide-xs" data-field="unit">Unit</th><th data-field="kept">Status</th><th class="num" data-field="d_logloss">Held-out Δ</th><th class="num nb-hide-xs" data-field="seasons_better">Better in</th><th class="num" data-field="d_test">Test Δ</th></tr></thead>
+          <tbody class="dash-skeleton"></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="nb-tip" id="nb-tip" role="tooltip"></div>
+</div>
+</div></div>
+<footer class="site-foot"><p>Ratings: points vs an average Division I team. Data: ESPN; preseason ratings: KenPom, Bart Torvik; venue geography: GeoNames (CC BY 4.0). Updated every morning.</p></footer>
+<script>(() => {
+
+// ---------- calcs (readers see these) ----------
+dash.calc('derived', {
+  title: 'Records',
+  description: 'Per team: overall and conference wins–losses, and the projected records rounded to whole games.',
+  inputs: ['teams'],
+  fn: (teams) => teams.map((t) => {
+    const wl = (w, l) => { const a = Math.round(+w), b = Math.round(+w + +l) - a; return Number.isFinite(a) && Number.isFinite(b) && w !== '' ? `${a}–${b}` : ''; };
+    return { abbr: t.abbr, record: `${t.w}–${t.l}`, conf_record: `${t.cw}–${t.cl}`, proj_record: wl(t.proj_w, t.proj_l), proj_conf: wl(t.proj_cw, t.proj_cl) };
+  }),
+});
+dash.calc('team_games', {
+  title: 'Games from each team’s side',
+  description: 'Every game once per D1 team in it: opponent, home (vs), away (@) or neutral (N), result, score, win chance, spread and rating change for that team.',
+  inputs: ['schedule'],
+  fn: (schedule) => schedule.flatMap((g) => [true, false].filter((home) => String(home ? g.home_d1 : g.away_d1) === '1').map((home) => {
+    const fin = /^final/i.test(g.status);
+    const us = home ? g.hs : g.as, them = home ? g.as : g.hs;
+    const ph = g.p_home === '' || g.p_home == null ? null : +g.p_home, sp = g.spread === '' || g.spread == null ? null : +g.spread;  // blank for an undecided bracket game
+    return {
+      id: g.id, abbr: home ? g.home : g.away, opp: home ? g.away : g.home, opp_name: home ? g.away_name : g.home_name,
+      opp_d1: home ? g.away_d1 : g.home_d1, date: g.date, tip: g.tip, status: g.status, conf_game: g.conf_game,
+      ha: String(g.neutral) === '1' ? 'N' : home ? 'vs' : '@',
+      result: fin ? (+us > +them ? 'W' : 'L') : '',
+      score: fin ? `${us}–${them}` : '',
+      p_win: ph === null ? null : home ? ph : 1 - ph,
+      spread: sp === null ? null : home ? sp : -sp,
+      delta: fin && g.home_delta !== '' ? (home ? +g.home_delta : -g.home_delta) : null,
+    };
+  })),
+});
+dash.calc('slate', {
+  title: 'Remaining schedule by team',
+  description: 'Per team: games left, expected wins at today’s ratings (the sum of its win chances) and the average win chance.',
+  inputs: ['team_games'],
+  fn: (team_games) => {
+    const by = {};
+    // an undecided bracket game (no opponent yet) counts as a coin flip, as in the model
+    team_games.filter((g) => !/^(final|postponed|canceled|cancelled|suspended|forfeit)/i.test(g.status) && String(g.date) >= todayET()).forEach((g) => { const s = (by[g.abbr] ||= { abbr: g.abbr, left: 0, exp_w: 0 }); s.left += 1; s.exp_w += g.p_win === null ? 0.5 : g.p_win; });
+    return Object.values(by).map((s) => ({ ...s, avg_p: s.exp_w / s.left }));
+  },
+});
+dash.calc('field', {
+  title: 'Projected NCAA field',
+  description: 'The projected field: each conference’s likeliest automatic bid, then the other teams by their chance of an at-large bid when they miss the automatic one, until the field is full (its size = the summed chances of making it). Seeded by mean simulated seed, four per line, with the last at-large teams and the lowest automatic qualifiers in the Opening Round (field − 64 games, split between them); plus the bubble (last four in, the next eight out).',
+  inputs: ['teams'],
+  fn: (teams) => {
+    const v = (x) => (x === '' || x == null || !Number.isFinite(+x) ? 0 : +x);
+    const ok = teams.filter((t) => String(t.elig) !== '0');
+    const size = Math.round(teams.reduce((s, t) => s + v(t.p_ncaa), 0)) || 68;
+    const champ = new Map();
+    ok.forEach((t) => { if (v(t.p_auto) > 0 && v(t.p_auto) > v(champ.get(t.conf)?.p_auto)) champ.set(t.conf, t); });
+    const auto = new Set([...champ.values()].map((t) => t.abbr));
+    // at-large order: the chance of an at-large bid in the simulations where the team missed its automatic bid,
+    // so a team that often wins its conference is not pushed down the list by its own auto-bid chances
+    const atq = (t) => (v(t.p_auto) < 0.98 ? v(t.p_atlarge) / (1 - v(t.p_auto)) : v(t.p_atlarge));
+    const rest = ok.filter((t) => !auto.has(t.abbr)).sort((a, b) => atq(b) - atq(a) || v(b.p_ncaa) - v(a.p_ncaa) || v(b.rating) - v(a.rating));
+    const nAt = Math.max(0, size - auto.size);
+    const atl = rest.slice(0, nAt);
+    const field = [...champ.values(), ...atl].sort((a, b) => (v(a.mean_seed) || 99) - (v(b.mean_seed) || 99) || v(b.rating) - v(a.rating));
+    const pos = new Map(field.map((t, i) => [t.abbr, i]));
+    const games = Math.max(0, field.length - 64), gAt = Math.ceil(games / 2), gAu = games - gAt;
+    const ffAt = atl.slice(atl.length - 2 * gAt).sort((a, b) => pos.get(a.abbr) - pos.get(b.abbr));
+    const ffAu = gAu ? field.filter((t) => auto.has(t.abbr)).slice(-2 * gAu) : [];
+    const ff = new Set([...ffAt, ...ffAu].map((t) => t.abbr));
+    const slots = field.filter((t) => !ff.has(t.abbr)).map((t) => [t]);
+    [ffAt, ffAu].forEach((g) => { for (let k = 0; k + 1 < g.length; k += 2) slots.push([g[k], g[k + 1]]); });
+    slots.sort((a, b) => Math.min(...a.map((t) => pos.get(t.abbr))) - Math.min(...b.map((t) => pos.get(t.abbr))));
+    const rows = [], order = new Map(rest.map((t, i) => [t.abbr, i + 1]));
+    slots.forEach((s, k) => s.forEach((t) => rows.push({ abbr: t.abbr, line: Math.min(16, Math.floor(k / 4) + 1), slot: k + 1, pos: pos.get(t.abbr) + 1, bid: auto.has(t.abbr) ? 'auto' : 'at-large', first_four: s.length > 1 ? 1 : 0, bubble: '', at_order: order.get(t.abbr) || '', p_at: auto.has(t.abbr) ? '' : atq(t) })));
+    atl.slice(-4).forEach((t) => { const r = rows.find((x) => x.abbr === t.abbr); if (r) r.bubble = 'Last four in'; });
+    rest.slice(nAt, nAt + 8).forEach((t, k) => rows.push({ abbr: t.abbr, line: '', slot: '', pos: '', bid: 'out', first_four: 0, bubble: k < 4 ? 'First four out' : 'Next four out', at_order: nAt + k + 1, p_at: atq(t) }));
+    return rows;
+  },
+});
+dash.calc('conf_bids', {
+  title: 'Expected NCAA bids by conference',
+  description: 'Per conference: the summed chances of its teams making the NCAA tournament, and how many teams it has.',
+  inputs: ['teams'],
+  fn: (teams) => {
+    const by = {};
+    teams.forEach((t) => { const c = (by[t.conf] ||= { conf: t.conf, conf_name: t.conf_name, bids: 0, teams: 0 }); c.bids += +t.p_ncaa || 0; c.teams += 1; });
+    return Object.values(by).sort((a, b) => b.bids - a.bids);
+  },
+});
+
+// ---------- helpers ----------
+const root = document.getElementById('nb');
+const tip = document.getElementById('nb-tip');
+const MINUS = '−';
+const QS = new URLSearchParams(location.search);
+// logo paths in the logos dataset are relative to the data folder: the public site's NB_DATA, or dev.html's ?data=
+const DATA_BASE = (window.NB_DATA || QS.get('data') || '../mock').replace(/\/$/, '');
+const asset = (src) => (!src ? '' : /^(data:|https?:|blob:|\/)/i.test(src) ? src : `${DATA_BASE}/${src}`);
+const N = (x) => (x === '' || x === null || x === undefined ? NaN : +x);
+const isOne = (v) => String(v) === '1' || /^true$/i.test(String(v));
+const rnd = (x, d) => Math.sign(x) * Math.round(Math.abs(x) * 10 ** d + 1e-9) / 10 ** d;  // half-up on the decimal, not the binary float
+// every probability to one decimal: <0.1% below 0.05%, >99.9% from 99.95% up to 100%, 100% only for 1, — for 0
+const fmtP = (v) => {
+  const p = N(v);
+  if (!Number.isFinite(p)) return '';
+  if (p <= 0) return '—';
+  if (p >= 1) return '100%';
+  if (p < 0.0005) return '<0.1%';
+  if (p >= 0.9995) return '>99.9%';
+  return rnd(p * 100, 1).toFixed(1) + '%';
+};
+// a game's two win chances, shown so they add up to 100.0%
+const fmtPair = (ph) => {
+  const p = N(ph);
+  if (!Number.isFinite(p)) return ['', ''];
+  const h = fmtP(p);
+  if (!/^\d/.test(h) || h === '100%') return [fmtP(1 - p), h];
+  return [(100 - rnd(p * 100, 1)).toFixed(1) + '%', h];
+};
+const signed = (v, d = 0) => {
+  const x = N(v);
+  if (!Number.isFinite(x)) return '';
+  const r = rnd(x, d);
+  if (r === 0) return (0).toFixed(d);
+  return (r > 0 ? '+' : MINUS) + Math.abs(r).toFixed(d);
+};
+const fmtR = (v) => signed(v, 2);                       // a rating in points: +7.91, −5.50, 0.00
+const fmtTick = (v) => signed(v, Number.isInteger(+v) ? 0 : 1);  // axis ticks: +4, −2.5
+const ordinal = (v) => { const n = N(v); if (!Number.isFinite(n)) return ''; const k = n % 100, j = n % 10; return n + (k >= 11 && k <= 13 ? 'th' : j === 1 ? 'st' : j === 2 ? 'nd' : j === 3 ? 'rd' : 'th'); };
+// display code: the ESPN abbreviation (DESIGN appends the id to an abbreviation two teams share; that is dropped here)
+const code = (t) => { if (!t) return ''; const a = String(t.abbr || ''), id = String(t.id || ''); return id && a.length > id.length && a.endsWith(id) ? a.slice(0, -id.length) : a; };
+const tone = (v, d = 1) => { const r = rnd(N(v), d); return r > 0 ? 'up' : r < 0 ? 'down' : 'muted'; };
+const fmt1 = (v) => (Number.isFinite(N(v)) ? rnd(N(v), 1).toFixed(1) : '');
+const fmtVal = (v) => { const x = N(v); if (!Number.isFinite(x)) return String(v ?? ''); return Number.isInteger(x) ? String(x) : String(+x.toPrecision(4)).replace('-', MINUS); };
+const fmtSpread = (v) => { const x = N(v); if (!Number.isFinite(x)) return ''; return rnd(x, 1) === 0 ? 'PK' : signed(x, 1); };
+const parseDay = (s) => new Date(String(s).slice(0, 10) + 'T00:00:00Z');
+const fmtDay = d3.utcFormat('%b %-d');
+const fmtDow = d3.utcFormat('%a, %b %-d');
+const fmtMon = d3.utcFormat('%b');
+const etTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+const etStamp = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+const fmtTip = (iso) => { const d = new Date(iso); if (isNaN(d)) return ''; const t = etTime.format(d); return t === '12:00 AM' ? '' : t; };  // ESPN puts TV-time-TBA games at midnight ET
+const comma = d3.format(',');
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+const td = (text, cls) => el('td', cls, text);
+const OK = (id) => dash.data(id).status === 'ok';
+const BAD = new Set(['error', 'connect', 'declined', 'missing']);
+const state = (...ids) => { const s = ids.map((id) => dash.data(id).status); if (s.every((x) => x === 'ok')) return 'ok'; if (s.some((x) => BAD.has(x))) return 'error'; return 'loading'; };
+const failed = (box) => { box.replaceChildren(); box.classList.remove('dash-skeleton'); box.classList.add('nb-failed'); box.append('Failed to load'); };
+const ready = (box) => { box.classList.remove('dash-skeleton', 'nb-failed'); };
+const pending = (box) => { box.classList.remove('nb-failed'); box.classList.add('dash-skeleton'); };
+const boxState = (box, ...ids) => { const s = state(...ids); if (s === 'ok') { ready(box); box.replaceChildren(); return true; } if (s === 'error') failed(box); else { box.replaceChildren(); pending(box); } return false; };
+const failRow = (tbody, cols, h = 200, text = 'Failed to load', cls = 'nb-failed') => { tbody.replaceChildren(); const tr = el('tr'); const c = td('', cls); c.colSpan = cols; c.style.height = h + 'px'; c.append(text); tr.append(c); tbody.append(tr); tbody.classList.remove('dash-skeleton'); };
+// a table body's state: true when its data is ready to draw
+const tableState = (tbody, cols, ids, h) => {
+  const s = state(...ids);
+  if (s === 'ok') { ready(tbody); return true; }
+  if (s === 'error') failRow(tbody, cols, h); else pending(tbody);
+  return false;
+};
+// today's Eastern date at view time, as YYYY-MM-DD (?today=YYYY-MM-DD pins it, for checking a fixed slate)
+const etDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+const PIN_DAY = /^\d{4}-\d{2}-\d{2}$/.test(QS.get('today') || '') ? QS.get('today') : null;
+const todayET = () => PIN_DAY || etDay.format(new Date());
+const shiftDay = (day, n) => new Date(+parseDay(day) + n * 864e5).toISOString().slice(0, 10);
+// schedule status, whatever its case or ESPN spelling: final, live, off (postponed, canceled) or scheduled
+const ST = (s) => { s = String(s || '').toLowerCase(); return /^(status_)?final|complete/.test(s) ? 'final' : /live|progress|half|end_|delay/.test(s) ? 'live' : /postpon|cancel|suspend|forfeit/.test(s) ? 'off' : 'scheduled'; };
+let schedSrc = null, schedCache = [];
+const schedRows = () => {  // the schedule in date and tip order, each game with its status class and neutral flag
+  const d = OK('schedule') ? dash.data('schedule').data : [];
+  if (d !== schedSrc) {
+    schedSrc = d;
+    schedCache = d.map((g) => ({ ...g, st: ST(g.status), nt: isOne(g.neutral) }))
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.tip).localeCompare(String(b.tip)) || String(a.id).localeCompare(String(b.id)));
+  }
+  return schedCache;
+};
+
+// CSS color -> {r,g,b} through a canvas (handles any token's computed color)
+const cnv = document.createElement('canvas'); cnv.width = cnv.height = 1;
+const cctx = cnv.getContext('2d', { willReadFrequently: true });
+const toRGB = (c) => { cctx.clearRect(0, 0, 1, 1); cctx.fillStyle = '#000'; cctx.fillStyle = c; cctx.fillRect(0, 0, 1, 1); const [r, g, b] = cctx.getImageData(0, 0, 1, 1).data; return { r, g, b }; };
+const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+const hex = (c) => { const s = String(c || '').trim().replace(/^#/, ''); return /^[0-9a-f]{6}$/i.test(s) ? '#' + s : null; };
+let panelRGB = null;
+const inkCache = new Map();
+const teamInk = (t) => {
+  if (!t) return 'var(--color-fg)';
+  const key = t.abbr + '|' + JSON.stringify(panelRGB);
+  if (inkCache.has(key)) return inkCache.get(key);
+  const opts = [hex(t.color), hex(t.alt_color)].filter(Boolean).map((c) => ({ c, k: contrast(toRGB(c), panelRGB) }));
+  let ink = 'var(--color-fg)';
+  if (opts.length) { const best = opts[0].k >= 2.2 ? opts[0] : opts.reduce((a, b) => (b.k > a.k ? b : a)); if (best.k >= 2.2) ink = best.c; }
+  inkCache.set(key, ink);
+  return ink;
+};
+// the team ink, pulled toward the theme's text colour until it reaches `min` contrast on the panel (for thin lines and small labels)
+const teamInkMin = (t, min = 3) => {
+  const base = teamInk(t);
+  if (!panelRGB || /^var\(/.test(base)) return base;
+  const key = 'min' + min + '|' + base + '|' + JSON.stringify(panelRGB);
+  if (inkCache.has(key)) return inkCache.get(key);
+  const c = toRGB(base), to = lum(panelRGB) < 0.2 ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 };
+  let out = base;
+  for (let w = 0; w <= 1.0001; w += 0.05) {
+    const m = { r: Math.round(c.r + (to.r - c.r) * w), g: Math.round(c.g + (to.g - c.g) * w), b: Math.round(c.b + (to.b - c.b) * w) };
+    if (contrast(m, panelRGB) >= min) { out = w ? `rgb(${m.r},${m.g},${m.b})` : base; break; }
+  }
+  inkCache.set(key, out);
+  return out;
+};
+
+let tmSrc = null, tmCache = new Map();
+const teamMap = () => { const d = OK('teams') ? dash.data('teams').data : []; if (d !== tmSrc) { tmSrc = d; tmCache = new Map(d.map((t) => [t.abbr, t])); } return tmCache; };
+const derivedMap = () => new Map((OK('derived') ? dash.data('derived').data : []).map((d) => [d.abbr, d]));
+// logos: the dark variant on a dark panel; a logo without one keeps a faint light edge there instead of a white disc
+const logoMap = () => {
+  const dark = root.classList.contains('nb-dark');
+  return new Map((OK('logos') ? dash.data('logos').data : []).map((l) => [l.abbr, { src: asset(dark && l.dark ? l.dark : l.src), glow: dark && (!l.dark || l.dark === l.src) }]));
+};
+const logoImg = (logos, t, cls = 'nb-logo') => {
+  const L = t && logos.get(t.abbr);
+  if (L && L.src) { const i = el('img', [cls, L.glow ? 'glow' : ''].filter(Boolean).join(' ')); i.src = L.src; i.alt = ''; i.decoding = 'async'; return i; }
+  const c = el('i', 'nb-chip'); if (t) c.style.borderColor = hex(t.color) || 'var(--cds-chart-muted)'; return c;
+};
+// a team name + logo that opens the team's page (the abbreviation is kept on the element, not as an attribute)
+const teamTag = (logos, t, text) => {
+  const s = el('span', 'nb-team nb-tlink'); s.append(logoImg(logos, t), text);
+  s._abbr = t.abbr; s.tabIndex = 0; s.setAttribute('role', 'link');
+  return s;
+};
+const ndTag = (name) => { const s = el('span', 'nb-team nd'); s.append(el('i', 'nb-nologo'), el('span', 'nm', name)); return s; };  // a non-D1 side: name, no logo
+const nameParts = (t) => { const nm = el('span', 'nm'); nm.append(el('span', 'full', t.short || t.name), el('span', 'short', code(t))); return nm; };
+// a game's opponent seen from one side: "vs. UNC", "@ UVA", "vs. Mount Olive"; neutral sites read "vs." both ways
+const oppText = (g, home, tmap) => {
+  const k = home ? g.away : g.home, t = tmap.get(k);
+  return `${home || g.nt ? 'vs.' : '@'} ${t ? code(t) : (home ? g.away_name : g.home_name) || k}`;
+};
+// SOS / SOR value with its national rank, the rank green at the good end and red at the bad end
+const withRankTone = (v, r, nT, flip) => {
+  const c = el('span', ''); c.title = signed(v, 2);
+  c.append(el('span', 'v', signed(v, 2)), el('span', 'rk', Number.isFinite(N(r)) ? ordinal(r) : ''));
+  const n = N(r);
+  if (Number.isFinite(n) && nT > 1) { const f = (flip ? nT - n : n - 1) / (nT - 1), x = Math.round(Math.abs(1 - 2 * f) * 100); c.lastChild.style.setProperty('--rkc', `color-mix(in srgb, var(${f < 0.5 ? '--color-ok' : '--color-bad'}) ${x}%, var(--color-fg-muted))`); }
+  return c;
+};
+const rankTone = (r, nT, flip) => { const c = withRankTone('', r, nT, flip); c.firstChild.remove(); c.removeAttribute('title'); return c; };
+
+// tooltip inside .nb
+const showTip = (evt, lines) => {
+  tip.replaceChildren();
+  lines.forEach((ln, i) => {
+    if (i === 0) { tip.append(el('div', 't', ln)); return; }
+    const row = el('div', 'r');
+    row.append(el('span', '', ln[0]), el('span', '', ln[1]));
+    tip.append(row);
+  });
+  tip.style.display = 'block';
+  const box = root.getBoundingClientRect();
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = evt.clientX - box.left + 14, y = evt.clientY - box.top + 14;
+  if (x + w > box.width) x = evt.clientX - box.left - w - 14;
+  if (x < 0) x = Math.max(0, box.width - w);
+  if (y + h > box.height) y = evt.clientY - box.top - h - 14;
+  tip.style.left = x + 'px'; tip.style.top = Math.max(0, y) + 'px';
+};
+const hideTip = () => { tip.style.display = 'none'; };
+
+// text width for SVG margins, measured as drawn
+const measure = (svg, texts, size) => {
+  const g = svg.append('g').attr('opacity', 0);
+  let w = 0;
+  texts.forEach((t) => { const n = g.append('text').attr('font-size', size).text(t).node(); w = Math.max(w, n.getComputedTextLength()); });
+  g.remove();
+  return w;
+};
+const newSvg = (box, W, H, label) => d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H).attr('role', 'img').attr('aria-label', label);
+const unfont = (g) => g.attr('font-size', null).attr('font-family', null);
+
+// ---------- tabs and links ----------
+// the public site (window.NB_PUBLIC) leaves out the Model tab
+const PUBLIC = window.NB_PUBLIC === true;
+const HIDDEN = new Set(PUBLIC ? ['model'] : []);
+const TABS = ['rankings', 'tournament', 'games', 'team', 'model'].filter((t) => !HIDDEN.has(t));
+root.querySelectorAll('.nb-tab').forEach((b) => { if (HIDDEN.has(b.dataset.tab)) b.remove(); });
+HIDDEN.forEach((t) => { document.getElementById('pg-' + t).hidden = true; });
+if (PUBLIC) document.getElementById('pg-model').remove();
+let teamAbbr = null;
+const readHash = () => {
+  let h = location.hash.slice(1);
+  try { h = decodeURIComponent(h); } catch (e) { /* keep it raw */ }
+  const m = /^team-(.+)$/i.exec(h);
+  if (m) return { tab: 'team', abbr: m[1] };
+  return TABS.includes(h) ? { tab: h } : null;
+};
+const first = readHash();
+let current = first ? first.tab : 'rankings';
+if (first && first.abbr) teamAbbr = first.abbr;
+const tabButtons = [...root.querySelectorAll('.nb-tab')];
+const linkName = () => (current === 'team' && teamAbbr ? 'team-' + encodeURIComponent(teamAbbr) : current);
+const showTab = (id, link) => {
+  current = id;
+  tabButtons.forEach((b) => { const on = b.dataset.tab === id; b.setAttribute('aria-selected', on); b.tabIndex = on ? 0 : -1; });
+  TABS.forEach((t) => { document.getElementById('pg-' + t).hidden = t !== id; });
+  hideTip();
+  if (link) dash.setLink(linkName());
+  draw();
+};
+const openTeam = (abbr) => {
+  const prev = teamAbbr;
+  teamAbbr = abbr;
+  const wasTeam = current === 'team';
+  showTab('team', true);
+  const nav = document.getElementById('tabs');
+  if (!wasTeam && nav.getBoundingClientRect().top < 0) nav.scrollIntoView({ block: 'start' });
+  if (wasTeam && prev !== abbr) document.getElementById('team-head').scrollIntoView({ block: 'start' });
+};
+tabButtons.forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab, true)));
+window.addEventListener('hashchange', () => {
+  const h = readHash(); if (!h) return;
+  if (h.tab === 'team' && h.abbr && h.abbr !== teamAbbr) { teamAbbr = h.abbr; showTab('team', false); }
+  else if (h.tab !== current) showTab(h.tab, false);
+});
+root.querySelector('#tabs').addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  const i = TABS.indexOf(current), j = (i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length;
+  showTab(TABS[j], true); tabButtons[j].focus();
+});
+// any team name or logo opens its page
+root.addEventListener('click', (e) => { const t = e.target.closest('.nb-tlink'); if (t && t._abbr) { e.preventDefault(); openTeam(t._abbr); } });
+root.addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; const t = e.target.closest('.nb-tlink'); if (t && t._abbr) openTeam(t._abbr); });
+
+// ---------- header ----------
+const fill = (sel, text) => root.querySelectorAll(sel).forEach((e) => { e.textContent = text; e.classList.remove('dash-skeleton'); });
+function drawHeader() {
+  const run = dash.data('run');
+  if (run.status === 'ok' && run.data.length) {
+    const r = run.data[0];
+    const season = String(r.season ?? '');
+    fill('[data-source=run][data-field=season]', /^\d{4}$/.test(season) ? `${+season - 1}–${season.slice(-2)}` : season);
+    const at = new Date(r.as_of);
+    fill('[data-source=run][data-field=as_of]', isNaN(at) ? String(r.as_of) : etStamp.format(at) + ' ET');
+    fill('[data-source=run][data-field=n_sims]', comma(N(r.n_sims)));
+    fill('[data-source=run][data-field=elo_per_point]', fmt1(r.elo_per_point));
+  } else if (BAD.has(run.status)) {
+    fill('[data-source=run]', '');
+  }
+}
+
+// ---------- 1. rankings ----------
+// League: the whole of D1 by rating, 50 a page as two halves of 25; Conference: one conference, one table.
+// The view, page and conference live in dash.params (view, page, conf).
+const PER = 50;
+let rkSort = { key: 'rank', dir: 1 }, cfSort = { key: 'rank', dir: 1 };
+const DESC_FIRST = new Set(['rating', 'rank_d1', 'proj_w', 'proj_cw', 'sos', 'sor', 'p_ncaa', 'p_title', 'p_conf_reg', 'p_conf_tourney', 'cw']);
+const rkTable = document.getElementById('rankings-table');
+const rkTable2 = document.getElementById('rankings-table-2');
+const rkTables = [rkTable, rkTable2];
+const cfTable = document.getElementById('conf-table');
+rkTable2.tHead.replaceWith(rkTable.tHead.cloneNode(true));  // the right half (26–50) repeats the header
+const sortVal = (t, k) => {
+  if (k === 'name') return String(t.short || t.name || '');
+  if (k === 'mean_seed') return N(t.p_ncaa) >= 0.01 ? N(t.mean_seed) : NaN;
+  if (k === 'cw') { const w = N(t.cw), l = N(t.cl); return w + l > 0 ? w / (w + l) + w * 1e-3 : NaN; }
+  return N(t[k]);
+};
+const sortRows = (rows, s) => rows.slice().sort((a, b) => {
+  const x = sortVal(a, s.key), y = sortVal(b, s.key);
+  let c;
+  if (typeof x === 'string') c = x.localeCompare(y);
+  else { const fx = Number.isFinite(x), fy = Number.isFinite(y); c = fx && fy ? x - y : fx ? -s.dir : fy ? s.dir : 0; }  // blanks last either way
+  return c ? c * s.dir : N(a.rank) - N(b.rank);
+});
+const wireSort = (tables, get, set) => tables.forEach((tb) => tb.querySelectorAll('th[data-sort]').forEach((th) => th.querySelector('button').addEventListener('click', () => {
+  const k = th.dataset.sort, s = get();
+  set(s.key === k ? { key: k, dir: -s.dir } : { key: k, dir: DESC_FIRST.has(k) ? -1 : 1 });
+  draw();
+})));
+wireSort(rkTables, () => rkSort, (s) => { rkSort = s; });
+wireSort([cfTable], () => cfSort, (s) => { cfSort = s; });
+const markSort = (tables, s) => tables.forEach((tb) => tb.querySelectorAll('th[data-sort]').forEach((th) => {
+  if (th.dataset.sort === s.key) th.setAttribute('aria-sort', s.dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort');
+}));
+const viewSeg = document.getElementById('view-seg');
+const pageSeg = document.getElementById('page-seg');
+const pageSel = document.getElementById('page-sel');
+const confPick = document.getElementById('conf-pick');
+const rkView = () => (dash.params().view === 'conf' ? 'conf' : 'league');
+const rkPage = (n) => Math.min(Math.max(1, Math.ceil(n / PER)) - 1, Math.max(0, Math.floor(N(dash.params().page)) || 0));
+const confList = (teams) => [...new Set(teams.map((t) => t.conf).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+const rkConf = (list) => { const c = dash.params().conf; return list.includes(c) ? c : list.includes('ACC') ? 'ACC' : list[0]; };
+viewSeg.addEventListener('click', (e) => { const b = e.target.closest('button[data-view]'); if (b) dash.setParams({ view: b.dataset.view }); });
+pageSeg.addEventListener('click', (e) => { const b = e.target.closest('button[data-page]'); if (b) dash.setParams({ page: +b.dataset.page }); });
+pageSel.addEventListener('change', () => dash.setParams({ page: +pageSel.value }));
+confPick.addEventListener('change', () => dash.setParams({ conf: confPick.value }));
+// the clicked row opens its team (the name inside stays the keyboard target)
+['rankings-wrap', 'conf-wrap'].forEach((id) => document.getElementById(id).addEventListener('click', (e) => { if (e.target.closest('.nb-tlink')) return; const tr = e.target.closest('tbody tr'); if (tr && tr._abbr) openTeam(tr._abbr); }));
+
+// team search: pick from the list or type a name and press Enter
+const search = document.getElementById('team-search');
+const findTeam = (q) => {
+  q = String(q || '').trim().toLowerCase();
+  if (!q) return null;
+  const ts = [...teamMap().values()], byRank = (a, b) => N(a.rank) - N(b.rank);
+  const keys = (t) => [t.name, t.short, t.abbr, code(t), t.nickname, `${t.name} ${t.nickname}`].map((s) => String(s || '').toLowerCase());
+  return ts.find((t) => keys(t).includes(q))
+    || ts.filter((t) => keys(t).some((s) => s.startsWith(q))).sort(byRank)[0]
+    || ts.filter((t) => keys(t).some((s) => s.includes(q))).sort(byRank)[0] || null;
+};
+const goSearch = () => { const t = findTeam(search.value); if (t) { search.value = ''; search.blur(); openTeam(t.abbr); } };
+search.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); goSearch(); } });
+search.addEventListener('input', (e) => { if (e.inputType === 'insertReplacementText' || e.inputType === undefined) { const t = teamMap(); const q = search.value.trim().toLowerCase(); if ([...t.values()].some((x) => String(x.name).toLowerCase() === q)) goSearch(); } });
+let listSrc = null;
+const fillSearch = (teams) => {
+  if (listSrc === teams) return;
+  listSrc = teams;
+  document.getElementById('team-list').replaceChildren(...teams.map((t) => t.name).sort((a, b) => a.localeCompare(b)).map((n) => { const o = document.createElement('option'); o.value = n; return o; }));
+};
+
+// Last = each team's latest final; Next = its game today (ET), or tomorrow's once today's whole slate is final.
+// Mid-slate, a team whose game today is over shows it as Last.
+function lastNext() {
+  const sched = schedRows(), today = todayET();
+  const slate = sched.filter((g) => g.date === today && g.st !== 'off');
+  const done = slate.length > 0 && slate.every((g) => g.st === 'final');
+  const nextDay = done ? shiftDay(today, 1) : today;
+  const lastG = new Map(), nextG = new Map();
+  sched.forEach((g) => {  // date and tip order, so a later final overwrites an earlier one
+    if (g.st === 'final' && g.date <= today) { lastG.set(g.home, [g, true]); lastG.set(g.away, [g, false]); }
+    if ((g.st === 'scheduled' || g.st === 'live') && g.date === nextDay) { if (!nextG.has(g.home)) nextG.set(g.home, [g, true]); if (!nextG.has(g.away)) nextG.set(g.away, [g, false]); }
+  });
+  return { lastG, nextG };
+}
+const rowCtx = () => ({ der: derivedMap(), logos: logoMap(), tmap: teamMap(), nT: OK('teams') ? dash.data('teams').data.length : 0, ...lastNext() });
+const chgCell = (t) => { const rd = N(t.rank_d1); return td(rd > 0 ? '▲' + rd : rd < 0 ? '▼' + Math.abs(rd) : '–', 'c-chg ' + (rd > 0 ? 'up' : rd < 0 ? 'down' : 'flat')); };
+const teamCell = (t, x) => {
+  const tag = el('span', 'nb-team nb-tlink'); tag._abbr = t.abbr; tag.tabIndex = 0; tag.setAttribute('role', 'link');
+  const badge = el('span', 'nb-badge'); badge.append(logoImg(x.logos, t));
+  const nm = nameParts(t);
+  const rec = x.der.get(t.abbr)?.record;
+  if (rec) nm.append(el('span', 'rec', rec));
+  tag.append(badge, nm);
+  const c = td('', 'c-team'); c.append(tag); c.title = `${t.name} ${t.nickname || ''}`.trim();
+  return c;
+};
+const lastCell = (t, x, cls) => {
+  const c = td('–', 'c-last ' + cls), lg = x.lastG.get(t.abbr);  // "W 81–74 vs. UNC"
+  if (lg) {
+    const [g, home] = lg, us = +(home ? g.hs : g.as), them = +(home ? g.as : g.hs), o = oppText(g, home, x.tmap);
+    c.replaceChildren(el('b', '', us > them ? 'W' : 'L'), ` ${us}–${them} ${o}`);
+    c.title = `${fmtDay(parseDay(g.date))}: ${us > them ? 'W' : 'L'} ${us}–${them} ${o}`;
+  }
+  return c;
+};
+const nextCell = (t, x, cls) => { const c = td('–', 'c-next ' + cls), ng = x.nextG.get(t.abbr); if (ng) { c.textContent = oppText(ng[0], ng[1], x.tmap); c.title = c.textContent + (ng[0].st === 'live' ? ' (live)' : ''); } return c; };  // "@ UVA"
+const ncaaCell = (t, cls) => { const out = String(t.elig) === '0'; const c = td(out ? '–' : fmtP(t.p_ncaa), cls + (out ? ' muted' : '')); if (out) c.title = 'Not eligible for the NCAA tournament'; return c; };
+const leagueRow = (t, x) => {
+  const tr = el('tr'); tr.dataset.key = t.abbr; tr._abbr = t.abbr;
+  tr.style.setProperty('--tc', hex(t.color) || 'transparent');  // faint row wash
+  const proj = td(x.der.get(t.abbr)?.proj_record || '', 'num c-proj'); proj.title = `${fmt1(t.proj_w)}–${fmt1(t.proj_l)}`;
+  const sos = td('', 'num c-sos nb-hide-sm'); sos.append(withRankTone(t.sos, t.sos_rank, x.nT, true));
+  const sor = td('', 'num c-sos nb-hide-sm'); sor.append(withRankTone(t.sor, t.sor_rank, x.nT));
+  const seed = td(N(t.p_ncaa) >= 0.01 && Number.isFinite(N(t.mean_seed)) ? fmt1(t.mean_seed) : '–', 'num c-seed nb-hide-md');
+  tr.append(chgCell(t), td(String(N(t.rank)), 'num c-rank'), teamCell(t, x), td(fmtR(t.rating), 'num c-rating'), lastCell(t, x, 'nb-hide-xs'), nextCell(t, x, 'nb-hide-xs'),
+    proj, sos, sor, ncaaCell(t, 'num c-p'), seed, td(fmtP(t.p_title), 'num c-p'));
+  return tr;
+};
+const confRow = (t, x) => {
+  const tr = el('tr'); tr.dataset.key = t.abbr; tr._abbr = t.abbr;
+  tr.style.setProperty('--tc', hex(t.color) || 'transparent');
+  const pc = td(x.der.get(t.abbr)?.proj_conf || '', 'num c-proj nb-hide-md'); pc.title = `${fmt1(t.proj_cw)}–${fmt1(t.proj_cl)}`;
+  tr.append(chgCell(t), td(String(N(t.rank)), 'num c-rank'), teamCell(t, x), td(x.der.get(t.abbr)?.conf_record || '', 'num c-conf'), td(fmtR(t.rating), 'num c-rating'),
+    lastCell(t, x, 'nb-hide-xs'), nextCell(t, x, 'nb-hide-sm'), pc, td(fmtP(t.p_conf_reg), 'num c-p'), td(fmtP(t.p_conf_tourney), 'num c-p nb-hide-xs'),
+    ncaaCell(t, 'num c-p'), td(fmtP(t.p_title), 'num c-p nb-hide-md'));
+  return tr;
+};
+let pagesN = -1;
+function drawRankings() {
+  const view = rkView();
+  viewSeg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === view));
+  document.getElementById('rankings-wrap').hidden = view !== 'league';
+  document.getElementById('conf-wrap').hidden = view !== 'conf';
+  pageSeg.hidden = pageSel.hidden = view !== 'league';
+  confPick.hidden = view !== 'conf';
+  const [tb1, tb2] = rkTables.map((t) => t.tBodies[0]), cfb = cfTable.tBodies[0];
+  if (view === 'league') { if (!tableState(tb1, 12, ['teams'])) { tb2.replaceChildren(); ready(tb2); return; } ready(tb2); }
+  else if (!tableState(cfb, 12, ['teams'])) return;
+  const teams = dash.data('teams').data;
+  fillSearch(teams);
+  const x = rowCtx();
+  if (view === 'league') {
+    const n = teams.length, np = Math.max(1, Math.ceil(n / PER)), pg = rkPage(n);
+    if (pagesN !== n) {  // page buttons: 1–50, 51–100, …, 351–362
+      pagesN = n;
+      const labels = d3.range(np).map((k) => `${k * PER + 1}–${Math.min(n, (k + 1) * PER)}`);
+      pageSeg.replaceChildren(...labels.map((l, k) => { const b = el('button', '', l); b.dataset.page = k; return b; }));
+      pageSel.replaceChildren(...labels.map((l, k) => new Option(l, String(k))));
+    }
+    pageSeg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.page === pg));
+    pageSel.value = String(pg);
+    markSort(rkTables, rkSort);
+    const rows = sortRows(teams, rkSort).slice(pg * PER, pg * PER + PER).map((t) => leagueRow(t, x));
+    tb1.replaceChildren(...rows.slice(0, PER / 2));
+    tb2.replaceChildren(...rows.slice(PER / 2));
+    rkTable2.hidden = !tb2.rows.length;
+  } else {
+    const list = confList(teams), conf = rkConf(list);
+    if (confPick.options.length !== list.length) confPick.replaceChildren(...list.map((c) => new Option(c, c)));
+    confPick.value = conf;
+    markSort([cfTable], cfSort);
+    cfb.replaceChildren(...sortRows(teams.filter((t) => t.conf === conf), cfSort).map((t) => confRow(t, x)));
+  }
+}
+
+// PNG: a clean card of the current view (the page's 50 as two columns of 25, or the conference) on a dark board,
+// built off-screen from the teams data in the table's order, captured, then removed. Tables only, no title.
+function exportCard() {
+  const view = rkView(), teams = dash.data('teams').data, der = derivedMap();
+  const logos = new Map((OK('logos') ? dash.data('logos').data : []).map((l) => [l.abbr, asset(l.dark || l.src)]));
+  let chunks, cols;
+  if (view === 'conf') {
+    const conf = rkConf(confList(teams));
+    chunks = [sortRows(teams.filter((t) => t.conf === conf), cfSort)];
+    cols = [['#', ''], ['±', ''], ['', ''], ['Team', 'l'], ['Conf', ''], ['Rating', ''], ['Proj. conf', ''], ['Reg. season', ''], ['NCAA', '']];
+  } else {
+    const pg = rkPage(teams.length), rows = sortRows(teams, rkSort).slice(pg * PER, pg * PER + PER);
+    chunks = [rows.slice(0, PER / 2), rows.slice(PER / 2)].filter((c) => c.length);
+    cols = [['#', ''], ['±', ''], ['', ''], ['Team', 'l'], ['Rating', ''], ['Proj.', ''], ['NCAA', '']];
+  }
+  const card = el('div', 'nb-x');
+  const wrap = el('div', 'nb-x-cols'); wrap.style.setProperty('--cols', chunks.length);
+  chunks.forEach((chunk) => {
+    const t = el('table', 'nb-x-t'), head = el('tr');
+    cols.forEach(([txt, cls]) => head.append(el('th', cls, txt)));
+    t.createTHead().append(head);
+    const body = t.createTBody();
+    chunk.forEach((tm) => {
+      const tr = el('tr'); tr.style.setProperty('--tc', hex(tm.color) || 'transparent');
+      const rd = N(tm.rank_d1), r = N(tm.rating), d = der.get(tm.abbr) || {};
+      const img = el('img'); img.alt = ''; const src = logos.get(tm.abbr); if (src) img.src = src;
+      const lg = td('', 'lg'); lg.append(img);
+      const nm = td(tm.short || tm.name, 'tm'); if (d.record) nm.append(el('span', 'rec', d.record));
+      tr.append(td(String(N(tm.rank)), 'rk'), td(rd > 0 ? '▲' + rd : rd < 0 ? '▼' + Math.abs(rd) : '–', 'chg ' + (rd > 0 ? 'up' : rd < 0 ? 'down' : 'flat')), lg, nm);
+      if (view === 'conf') tr.append(td(d.conf_record || '', 'n'));
+      tr.append(td(fmtR(r), 'n ' + (r > 0 ? 'pos' : r < 0 ? 'neg' : '')));
+      if (view === 'conf') tr.append(td(d.proj_conf || '', 'n'), td(fmtP(tm.p_conf_reg), 'n'));
+      else tr.append(td(d.proj_record || '', 'n'));
+      tr.append(td(String(tm.elig) === '0' ? '–' : fmtP(tm.p_ncaa), 'n'));
+      body.append(tr);
+    });
+    wrap.append(t);
+  });
+  card.append(wrap);
+  return card;
+}
+document.getElementById('rk-png').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  if (!OK('teams')) return;
+  const day = OK('run') ? new Date(dash.data('run').data[0].as_of) : new Date();
+  const stamp = isNaN(day) ? todayET() : etDay.format(day);
+  const teams = dash.data('teams').data, view = rkView();
+  const tag = view === 'conf' ? '-' + rkConf(confList(teams)).toLowerCase().replace(/[^a-z0-9]+/g, '-') : rkPage(teams.length) ? `-${rkPage(teams.length) * PER + 1}` : '';
+  btn.disabled = true;
+  const card = exportCard();
+  root.append(card);
+  try {
+    await Promise.all([...card.querySelectorAll('img')].map((i) => (i.src ? i.decode().catch(() => {}) : null)));
+    const { toPng } = await import('https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/+esm');
+    const url = await toPng(card, { pixelRatio: 2, backgroundColor: '#0d0f13', width: card.offsetWidth, height: card.offsetHeight, style: { position: 'static', left: '0', top: '0' } });
+    const a = el('a'); a.href = url; a.download = `cbb-power-rankings-${stamp}${tag}.png`; a.click();
+  } catch (err) { console.error('PNG export failed', err); btn.textContent = 'PNG failed'; }
+  finally { card.remove(); btn.disabled = false; }
+});
+
+// ---------- 2. tournament ----------
+const calmM = (x) => Math.round(5 + 55 * Math.pow(Math.min(1, x), 0.7));  // a calm heat: at most 60% of the heat colour
+let heatRGB = null, fgRGB = null;
+const heatWhite = (x) => {  // white text only where it beats the page's text colour on the blended cell
+  if (!(x > 0) || !heatRGB || !panelRGB) return false;
+  const a = calmM(x) / 100, mix = {};
+  for (const k of 'rgb') mix[k] = heatRGB[k] * a + panelRGB[k] * (1 - a);
+  return contrast({ r: 255, g: 255, b: 255 }, mix) > contrast(fgRGB, mix);
+};
+const heatCell = (p) => {
+  const x = N(p), c = td(fmtP(x), 'h' + (x > 0 ? '' : ' zero') + (heatWhite(x) ? ' hi' : ''));
+  if (x > 0) c.style.background = `color-mix(in srgb, var(--nb-heat) ${calmM(x)}%, transparent)`;
+  return c;
+};
+const fieldRows = () => (OK('field') ? dash.data('field').data : []);
+function drawTournament() {
+  const cs = getComputedStyle(document.getElementById('odds-table'));
+  heatRGB = toRGB(cs.getPropertyValue('--nb-heat').trim()); fgRGB = toRGB(cs.color);
+  drawField();
+  drawOdds();
+  drawBubble();
+  drawBids();
+}
+function drawField() {
+  const box = document.getElementById('field');
+  if (!boxState(box, 'teams')) return;
+  const tmap = teamMap(), logos = logoMap();
+  const rows = fieldRows().filter((r) => r.line !== '' && tmap.has(r.abbr));
+  if (!rows.length) { box.append(el('p', 'nb-empty-note', 'No projected field yet.')); return; }
+  const grid = el('div', 'nb-fl');
+  d3.groups(rows, (r) => +r.line).sort((a, b) => a[0] - b[0]).forEach(([line, rs]) => {
+    const ln = el('div', 'nb-fl-line');
+    ln.append(el('div', 'nb-fl-seed', String(line)));
+    d3.groups(rs, (r) => +r.slot).sort((a, b) => a[0] - b[0]).forEach(([, members]) => {
+      const cell = el('div', 'nb-fc' + (members.length > 1 ? ' pair' : ''));
+      members.sort((a, b) => a.pos - b.pos).forEach((r) => {
+        const t = tmap.get(r.abbr), fr = el('div', 'nb-fr');
+        fr.style.setProperty('--tc', hex(t.color) || 'transparent');
+        const tag = el('span', 'nb-team nb-tlink'); tag._abbr = t.abbr; tag.tabIndex = 0; tag.setAttribute('role', 'link');
+        const badge = el('span', 'nb-badge'); badge.append(logoImg(logos, t));
+        tag.append(badge, nameParts(t));
+        fr.append(tag);
+        if (r.bid === 'auto') fr.append(el('span', 'cf', t.conf));
+        fr.append(el('span', 'pm', fmtP(t.p_ncaa)));
+        fr.title = `${t.name} · ${r.pos ? ordinal(r.pos) + ' overall' : ''}${r.first_four ? ' · Opening Round' : ''} · ${r.bid === 'auto' ? `projected ${t.conf} champion` : 'at-large'} · mean seed ${fmt1(t.mean_seed)}`;
+        cell.append(fr);
+      });
+      ln.append(cell);
+    });
+    grid.append(ln);
+  });
+  box.append(grid);
+}
+function drawOdds() {
+  const tbody = document.querySelector('#odds-table tbody');
+  if (!tableState(tbody, 8, ['teams'])) return;
+  const logos = logoMap(), der = derivedMap();
+  const rows = dash.data('teams').data.filter((t) => N(t.p_title) > 0).sort((a, b) => N(b.p_title) - N(a.p_title) || N(a.rank) - N(b.rank)).slice(0, 25);
+  if (!rows.length) { failRow(tbody, 8, 60, 'No title chances yet.', 'muted'); return; }
+  tbody.replaceChildren(...rows.map((t) => {
+    const tr = el('tr'); tr.dataset.key = t.abbr;
+    const nc = td('', 'sticky tmc'); const tag = teamTag(logos, t, nameParts(t)); const rec = der.get(t.abbr)?.record; if (rec) tag.lastChild.append(el('span', 'rec', rec)); nc.append(tag);
+    tr.append(nc, td(fmt1(t.mean_seed), 'num muted'));
+    ['p_r32', 'p_s16', 'p_e8', 'p_f4', 'p_final', 'p_title'].forEach((f) => tr.append(heatCell(t[f])));
+    return tr;
+  }));
+}
+function drawBubble() {
+  const bodies = ['bub-1', 'bub-2', 'bub-3'].map((id) => document.getElementById(id));
+  if (!tableState(bodies[0], 5, ['teams'])) { bodies.slice(1).forEach((b) => b.replaceChildren()); return; }
+  const tmap = teamMap(), logos = logoMap(), der = derivedMap(), nT = dash.data('teams').data.length;
+  const fr = fieldRows();
+  ['Last four in', 'First four out', 'Next four out'].forEach((name, k) => {
+    const body = bodies[k];
+    const g = el('tr', 'grp'); const th = el('th', '', name); th.colSpan = 5; th.scope = 'rowgroup'; g.append(th);
+    const rows = fr.filter((r) => r.bubble === name && tmap.has(r.abbr)).sort((a, b) => N(a.at_order) - N(b.at_order));
+    body.replaceChildren(g, ...rows.map((r) => {
+      const t = tmap.get(r.abbr), tr = el('tr'); tr.dataset.key = t.abbr; tr.style.setProperty('--tc', hex(t.color) || 'transparent');
+      const nc = td(''); const tag = teamTag(logos, t, nameParts(t)); const rec = der.get(t.abbr)?.record; if (rec) tag.lastChild.append(el('span', 'rec', rec)); nc.append(tag);
+      const sc = td('', 'num'); sc.append(rankTone(t.sor_rank, nT)); sc.title = `SOR ${signed(t.sor, 2)}`;
+      const pa = td(fmtP(r.p_at), 'num'); pa.title = `Makes the field ${fmtP(t.p_ncaa)} (automatic bid ${fmtP(t.p_auto)})`;
+      tr.append(nc, td(t.conf, 'muted nb-hide-xs'), td(fmtR(t.rating), 'num'), sc, pa);
+      return tr;
+    }));
+  });
+}
+function drawBids() {
+  const box = document.getElementById('bids');
+  if (!boxState(box, 'teams')) return;
+  const all = OK('conf_bids') ? dash.data('conf_bids').data : [];
+  let rows = all.filter((r) => r.bids >= 1.45);
+  if (rows.length < 6) rows = all.slice(0, 6);
+  rows = rows.slice(0, 14);
+  if (!rows.length) { box.append(el('p', 'nb-empty-note', 'No bids yet.')); return; }
+  const W = box.clientWidth, rowH = 24, top = 4, bottom = 22;
+  const H = top + rows.length * rowH + bottom;
+  box.style.minHeight = H + 'px';
+  const svg = newSvg(box, W, H, 'Expected NCAA bids by conference');
+  const lw = measure(svg, rows.map((r) => r.conf), 11.5) + 12;
+  const vw = measure(svg, ['10.0'], 11) + 10;
+  const xmax = Math.max(2, Math.ceil(d3.max(rows, (r) => r.bids)));
+  const x = d3.scaleLinear([0, xmax], [lw, W - vw]);
+  const ticks = d3.range(0, xmax + 1, xmax > 8 ? 2 : 1);
+  svg.append('g').attr('class', 'nb-grid-l').selectAll('line').data(ticks).join('line').attr('x1', (v) => x(v)).attr('x2', (v) => x(v)).attr('y1', top).attr('y2', H - bottom);
+  unfont(svg.append('g').attr('class', 'nb-axis').attr('transform', `translate(0,${H - bottom})`).call(d3.axisBottom(x).tickValues(ticks).tickFormat(d3.format('d')).tickSizeOuter(0).tickSize(4)));
+  const g = svg.selectAll('g.row').data(rows).join('g').attr('class', 'row').attr('transform', (r, i) => `translate(0,${top + i * rowH})`);
+  g.append('text').attr('x', lw - 10).attr('y', rowH / 2 + 4).attr('text-anchor', 'end').attr('font-size', 11.5).style('font-family', 'var(--nb-sans)').attr('font-weight', 550).attr('fill', 'var(--color-fg)').text((r) => r.conf);
+  g.append('rect').attr('x', lw).attr('y', 5).attr('height', rowH - 10).attr('rx', 3).attr('width', (r) => Math.max(1, x(r.bids) - lw)).attr('fill', 'var(--cds-chart-categorical-1)').attr('fill-opacity', 0.85);
+  g.append('text').attr('x', (r) => x(r.bids) + 6).attr('y', rowH / 2 + 4).attr('font-size', 11).attr('fill', 'var(--color-fg)').text((r) => fmt1(r.bids));
+  g.append('rect').attr('x', 0).attr('width', W).attr('height', rowH).attr('fill', 'transparent')
+    .on('pointermove', (e, r) => showTip(e, [r.conf_name || r.conf, ['Expected bids', fmt1(r.bids)], ['Teams', String(r.teams)]])).on('pointerleave', hideTip);
+}
+
+// ---------- 3. games ----------
+// Today's slate (ET), every game with a D1 team, grouped by tip time; once today's games are all final (or there are
+// none), the next day with games. Finals show the score, the rest both win chances and the favourite's spread.
+const spreadText = (g, tmap) => {
+  const sp = N(g.spread);
+  if (!Number.isFinite(sp)) return '';
+  if (rnd(sp, 1) === 0) return 'Pick';
+  const home = sp < 0, k = home ? g.home : g.away, t = tmap.get(k);
+  return `${t ? code(t) : (home ? g.home_name : g.away_name) || k} ${MINUS}${Math.abs(rnd(sp, 1)).toFixed(1)}`;
+};
+const gameTile = (g, tmap, logos) => {
+  const fin = g.st === 'final', live = g.st === 'live';
+  const tile = el('div', 'nb-gm' + (fin ? ' fin' : live ? ' live' : ''));
+  tile.dataset.key = g.id;
+  const ph = N(g.p_home), [pa, phs] = fmtPair(ph);
+  const side = (home) => {
+    const k = home ? g.home : g.away, t = isOne(home ? g.home_d1 : g.away_d1) ? tmap.get(k) : null;
+    const row = el('div', 'row');
+    row.append(el('span', 'rk', t ? String(N(t.rank)) : ''));
+    row.append(t ? teamTag(logos, t, nameParts(t)) : ndTag((home ? g.home_name : g.away_name) || k));
+    if (fin) { const us = N(home ? g.hs : g.as), them = N(home ? g.as : g.hs); row.append(el('span', 'pv', Number.isFinite(us) ? String(us) : '')); if (us > them) row.classList.add('win'); }
+    else { row.append(el('span', 'pv', home ? phs : pa)); if (home ? ph >= 0.5 : ph < 0.5) row.classList.add('fav'); }
+    return row;
+  };
+  tile.append(side(false), side(true));
+  if (!fin && Number.isFinite(ph)) {
+    const bar = el('div', 'bar'), a = el('i', ph < 0.5 ? 'fav' : ''), h = el('i', ph >= 0.5 ? 'fav' : '');
+    a.style.width = ((1 - ph) * 100) + '%'; h.style.width = (ph * 100) + '%';
+    bar.append(a, h); tile.append(bar);
+  }
+  const ft = el('div', 'ft');
+  ft.append(el('span', '', fin ? 'Final' : spreadText(g, tmap)));
+  const tags = [];
+  if (g.tourney === 'ncaa') tags.push('NCAA');
+  else if (g.tourney === 'conf') tags.push('Conf. tourney');
+  else if (g.nt) tags.push('Neutral');
+  if (live) tags.push('Live');
+  ft.append(el('span', live ? 'lv' : '', tags.join(' · ')));
+  tile.append(ft);
+  return tile;
+};
+function drawGames() {
+  const box = document.getElementById('slate');
+  const title = document.getElementById('games-title'), sum = document.getElementById('games-sum');
+  if (!boxState(box, 'schedule', 'teams')) { sum.textContent = ''; return; }
+  const tmap = teamMap(), logos = logoMap();
+  const sched = schedRows().filter((g) => g.st !== 'off'), today = todayET();
+  let day = today, games = sched.filter((g) => g.date === today);
+  if (!games.length || games.every((g) => g.st === 'final')) {
+    const nd = sched.filter((g) => g.date > today && g.st !== 'final').map((g) => g.date).sort()[0];
+    if (nd) { day = nd; games = sched.filter((g) => g.date === nd); }
+  }
+  title.textContent = day === today ? "Today's games" : 'Next games';
+  sum.textContent = games.length ? `${fmtDow(parseDay(day))} · ${games.length} game${games.length === 1 ? '' : 's'}` : '';
+  if (!games.length) { box.append(el('p', 'nb-empty-note', 'No games left on the schedule.')); return; }
+  const best = (g) => Math.min(...[[g.home, g.home_d1], [g.away, g.away_d1]].map(([k, d1]) => (isOne(d1) && tmap.has(k) ? N(tmap.get(k).rank) : Infinity)));
+  d3.groups(games, (g) => fmtTip(g.tip) || 'TBA').forEach(([time, gs]) => {
+    const sec = el('section', 'nb-slot');
+    const h = el('h3', 'nb-slot-h'); h.append(el('b', '', time), el('span', '', String(gs.length)));
+    const grid = el('div', 'nb-gms');
+    gs.slice().sort((a, b) => best(a) - best(b)).forEach((g) => grid.append(gameTile(g, tmap, logos)));
+    sec.append(h, grid);
+    box.append(sec);
+  });
+}
+
+// ---------- 4. team ----------
+const teamPick = document.getElementById('team-pick');
+teamPick.addEventListener('change', () => { if (teamPick.value) openTeam(teamPick.value); });
+const teamOptions = (sel) => {
+  const ts = [...teamMap().values()].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  if (sel.options.length !== ts.length) sel.replaceChildren(...ts.map((t) => new Option(t.name, t.abbr)));
+};
+const int0 = (v) => (Number.isFinite(N(v)) ? String(Math.round(N(v))) : '–');
+const TM_FMT = {
+  rating: fmtR, rating_prior: fmtR, sos: fmtR, rating_d7: (v) => signed(v, 2), sor: (v) => signed(v, 2), sos_rank: ordinal, sor_rank: ordinal,
+  rank: ordinal, proj_w: fmt1, proj_l: fmt1, proj_cw: fmt1, proj_cl: fmt1, w_p10: int0, w_p90: int0, mean_seed: fmt1,
+  p_ncaa: fmtP, p_title: fmtP, p_conf_reg: fmtP, p_conf_tourney: fmtP, pre_kenpom: (v) => signed(v, 1), pre_torvik: (v) => signed(v, 1),
+  exp_w: fmt1, avg_p: fmtP, left: (v) => String(v),
+};
+// point every single-value mark on the team page at the chosen team's row, then fill it
+function fillTeamMarks(abbr) {
+  const rowsOf = (id) => (OK(id) ? dash.data(id).data : null);
+  root.querySelectorAll('#pg-team .tm').forEach((e) => {
+    e.dataset.where = 'abbr=' + encodeURIComponent(abbr);
+    const rows = rowsOf(e.dataset.source);
+    if (!rows) { if (BAD.has(dash.data(e.dataset.source).status)) { e.textContent = ''; e.classList.remove('dash-skeleton'); } return; }
+    const r = rows.find((x) => x.abbr === abbr);
+    const v = r ? r[e.dataset.field] : '';
+    e.textContent = r ? (TM_FMT[e.dataset.field] || String)(v) : '';
+    e.classList.remove('dash-skeleton');
+  });
+}
+function drawTeam() {
+  const s = state('teams');
+  const head = document.getElementById('team-head');
+  if (s !== 'ok') {
+    ['team-wins', 'team-seeds', 'team-path', 'team-history', 'team-slate'].forEach((id) => { const b = document.getElementById(id); if (s === 'error') failed(b); else { b.replaceChildren(); pending(b); } });
+    return;
+  }
+  const tmap = teamMap();
+  if (teamAbbr && !tmap.has(teamAbbr)) teamAbbr = [...tmap.keys()].find((a) => a.toUpperCase() === String(teamAbbr).toUpperCase()) || null;
+  if (!teamAbbr) {
+    teamAbbr = dash.data('teams').data.reduce((a, b) => (N(b.rank) < N(a.rank) ? b : a)).abbr;
+    if (current === 'team') dash.setLink(linkName());
+  }
+  const t = tmap.get(teamAbbr);
+  teamOptions(teamPick);
+  teamPick.value = teamAbbr;
+  head.style.setProperty('--nb-team', teamInk(t));
+  const logos = logoMap();
+  document.getElementById('team-logo').replaceChildren(logoImg(logos, t, ''));
+  fillTeamMarks(teamAbbr);
+  // tiles that depend on the data
+  document.querySelector('#tile-rating [data-field=rating_d7]').className = 'tm ' + tone(t.rating_d7, 2);
+  const out = String(t.elig) === '0';
+  if (out) document.querySelector('#tile-ncaa .v .tm').textContent = '–';
+  document.getElementById('ncaa-in').hidden = out;
+  document.getElementById('ncaa-out').hidden = !out;
+  if (!(N(t.p_ncaa) >= 0.01)) document.querySelector('#ncaa-in [data-field=mean_seed]').textContent = '–';
+  const kp = Number.isFinite(N(t.pre_kenpom)), tv = Number.isFinite(N(t.pre_torvik));
+  document.getElementById('pre-kp').hidden = !kp; document.getElementById('pre-tv').hidden = !tv; document.getElementById('pre-sep').hidden = !(kp && tv);
+  drawTeamWins(t);
+  drawTeamPath(t);
+  drawTeamSeeds(t);
+  drawTeamHistory(t, tmap);
+  drawTeamSchedule(t, tmap, logos);
+}
+
+const winRows = () => dash.data('win_dist').data.map((r) => ({ abbr: r.abbr, wins: N(r.wins), p: N(r.p) })).filter((r) => Number.isFinite(r.wins) && r.p > 0);
+function drawTeamWins(t) {
+  const box = document.getElementById('team-wins');
+  if (!boxState(box, 'win_dist', 'teams')) return;
+  const dist = winRows().filter((r) => r.abbr === t.abbr).sort((a, b) => a.wins - b.wins);
+  if (!dist.length) { box.append(el('p', 'nb-empty-note', 'No simulated wins for this team.')); return; }
+  const vis = dist.filter((r) => r.p >= 0.0005);
+  const mean = N(t.proj_w), p10 = N(t.w_p10), p90 = N(t.w_p90);
+  const xmin = Math.max(0, d3.min(vis, (r) => r.wins) - 1), xmax = d3.max(vis, (r) => r.wins) + 1;
+  const W = box.clientWidth, H = 210, top = 22, bottom = 22, left = 4, right = 4;
+  const svg = newSvg(box, W, H, `${t.name} simulated win distribution`);
+  const x = d3.scaleLinear([xmin, xmax + 1], [left, W - right]);
+  const y = d3.scaleLinear([0, d3.max(dist, (r) => r.p)], [H - bottom, top]);
+  const bw = Math.max(1, x(xmin + 1) - x(xmin) - 1);
+  const ticks = x.ticks(Math.max(2, Math.floor(W / 60))).filter((v) => Number.isInteger(v) && v >= xmin && v <= xmax);
+  unfont(svg.append('g').attr('class', 'nb-axis').attr('transform', `translate(0,${H - bottom})`)
+    .call(d3.axisBottom(d3.scaleLinear([xmin + 0.5, xmax + 1.5], [x(xmin + 0.5), x(xmax + 1.5)])).tickValues(ticks.map((v) => v + 0.5)).tickFormat((v) => String(v - 0.5)).tickSizeOuter(0).tickSize(4)));
+  svg.append('g').selectAll('rect').data(dist.filter((r) => r.wins >= xmin && r.wins <= xmax)).join('rect')
+    .attr('x', (r) => x(r.wins)).attr('width', bw).attr('y', (r) => y(r.p)).attr('height', (r) => Math.max(0.5, y(0) - y(r.p))).attr('rx', Math.min(2, bw / 2))
+    .attr('fill', 'var(--cds-chart-categorical-1)').attr('fill-opacity', (r) => (r.wins >= p10 && r.wins <= p90 ? 0.9 : 0.35));
+  if (Number.isFinite(mean)) {
+    const px = x(mean + 0.5);
+    svg.append('line').attr('x1', px).attr('x2', px).attr('y1', 12).attr('y2', H - bottom).attr('stroke', 'var(--color-fg)').attr('stroke-width', 2);
+    const txt = svg.append('text').attr('y', 9).attr('font-size', 10.5).attr('fill', 'var(--color-fg)').text(`Mean ${fmt1(mean)}`);
+    const w = txt.node().getComputedTextLength();
+    txt.attr('x', px + 4 + w > W - right ? px - 4 : px + 4).attr('text-anchor', px + 4 + w > W - right ? 'end' : 'start');
+  }
+  svg.append('rect').attr('x', left).attr('y', top).attr('width', W - left - right).attr('height', H - top - bottom).attr('fill', 'transparent')
+    .on('pointermove', (e) => {
+      const [px] = d3.pointer(e, svg.node());
+      const w = Math.floor(x.invert(px));
+      if (w < xmin || w > xmax) { hideTip(); return; }
+      const at = dist.find((r) => r.wins === w)?.p ?? 0;
+      const atLeast = d3.sum(dist.filter((r) => r.wins >= w), (r) => r.p);
+      showTip(e, [`${w} wins`, ['Exactly', fmtP(at)], [`${w} or more`, fmtP(Math.min(1, atLeast))]]);
+    }).on('pointerleave', hideTip);
+}
+
+const PATH = [['grp', 'Conference'], ['p_conf_reg', 'Regular season', 1], ['p_conf_tourney', 'Tournament', 1], ['grp', 'NCAA tournament'],
+  ['p_ncaa', 'Make the field'], ['p_r32', 'Round of 32'], ['p_s16', 'Sweet 16'], ['p_e8', 'Elite Eight'], ['p_f4', 'Final Four'], ['p_final', 'Final'], ['p_title', 'Title']];
+function drawTeamPath(t) {
+  const box = document.getElementById('team-path');
+  ready(box);
+  const grid = el('div', 'nb-path');
+  PATH.forEach(([f, label, conf]) => {
+    if (f === 'grp') { grid.append(el('div', 'grp', label)); return; }
+    const p = N(t[f]);
+    const trk = el('div', 'trk' + (conf ? ' fin' : '')); const bar = el('i'); bar.style.width = (Math.max(0, Math.min(1, p || 0)) * 100) + '%'; trk.append(bar);
+    grid.append(el('div', 'lab', label), trk, el('div', 'val', fmtP(p)));
+  });
+  box.replaceChildren(grid);
+}
+
+const SEEDS = d3.range(1, 17);
+function drawTeamSeeds(t) {
+  const box = document.getElementById('team-seeds');
+  ready(box); box.replaceChildren();
+  const rows = SEEDS.map((k) => ({ k: String(k), p: N(t['seed_' + k]) || 0 }));
+  rows.push({ k: 'Out', p: Math.max(0, 1 - (N(t.p_ncaa) || 0)), out: true });
+  const W = box.clientWidth, H = 210, top = 16, bottom = 22, left = 2, right = 2;
+  const svg = newSvg(box, W, H, `${t.name} NCAA seed chances`);
+  const x = d3.scaleBand(rows.map((r) => r.k), [left, W - right]).paddingInner(0.18).paddingOuter(0.1);
+  const y = d3.scaleLinear([0, Math.max(0.05, d3.max(rows, (r) => r.p))], [H - bottom, top]);
+  svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.k) + (r.out ? 3 : 0)).attr('width', (r) => x.bandwidth()).attr('y', (r) => y(r.p)).attr('height', (r) => Math.max(r.p > 0 ? 1 : 0, y(0) - y(r.p)))
+    .attr('rx', Math.min(3, x.bandwidth() / 2)).attr('fill', (r) => (r.out ? 'var(--cds-chart-muted)' : 'var(--cds-chart-categorical-1)'));
+  // value labels: every bar's when they all fit, else the biggest bars' (largest first) wherever two would not meet
+  const cx = (r) => x(r.k) + (r.out ? 3 : 0) + x.bandwidth() / 2;
+  const lw = measure(svg, ['99.9%'], 9.5);
+  const cand = rows.filter((r) => r.p >= 0.0005), shown = x.step() >= lw + 2 ? cand : [];
+  if (!shown.length) cand.filter((r) => r.p >= 0.02).sort((a, b) => b.p - a.p).forEach((r) => { if (shown.every((o) => Math.abs(cx(o) - cx(r)) >= lw + 4)) shown.push(r); });
+  svg.append('g').selectAll('text').data(shown).join('text').attr('x', cx).attr('y', (r) => y(r.p) - 3)
+    .attr('text-anchor', 'middle').attr('font-size', 9.5).attr('fill', 'var(--color-fg-muted)').text((r) => fmtP(r.p));
+  const ax = unfont(svg.append('g').attr('class', 'nb-axis').attr('transform', `translate(0,${H - bottom})`).call(d3.axisBottom(x).tickSize(0).tickPadding(6)));
+  ax.select('.domain').attr('stroke', 'var(--cds-chart-axis)');
+  ax.selectAll('.tick').filter((k) => k === 'Out').attr('transform', `translate(${x('Out') + 3 + x.bandwidth() / 2},0)`);
+  svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.k) - (x.step() * x.paddingInner()) / 2).attr('width', x.step()).attr('y', top).attr('height', H - top - bottom).attr('fill', 'transparent')
+    .on('pointermove', (e, r) => showTip(e, [r.out ? 'Not in the field' : `Seed ${r.k}`, ['Chance', fmtP(r.p)]])).on('pointerleave', hideTip);
+}
+
+const historyRows = () => dash.data('history').data.map((r) => ({ abbr: r.abbr, date: parseDay(r.date), rating: N(r.rating) })).filter((r) => !isNaN(r.date) && Number.isFinite(r.rating));
+function drawTeamHistory(t, tmap) {
+  const box = document.getElementById('team-history');
+  if (!boxState(box, 'history', 'teams')) return;
+  const all = historyRows();
+  const mates = new Set([...tmap.values()].filter((o) => o.conf === t.conf).map((o) => o.abbr));
+  const rows = all.filter((r) => mates.has(r.abbr));
+  const mine = rows.filter((r) => r.abbr === t.abbr).sort((a, b) => a.date - b.date);
+  if (!mine.length) { box.append(el('p', 'nb-empty-note', 'No ratings yet this season.')); return; }
+  const W = box.clientWidth, H = 250, top = 12, bottom = 24;
+  const svg = newSvg(box, W, H, `${t.name} rating this season, with its conference`);
+  const ext = d3.extent(rows, (r) => r.rating);
+  const y0 = d3.scaleLinear().domain([Math.min(ext[0], 0) - 0.4, Math.max(ext[1], 0) + 0.4]).nice();
+  const yt = y0.ticks(5);
+  const left = measure(svg, yt.map((v) => fmtTick(v)), 10.5) + 10;
+  const endLab = fmtR(mine.at(-1).rating);
+  const right = measure(svg, [endLab], 11) + 12;
+  const x = d3.scaleUtc(d3.extent(all, (r) => r.date), [left, W - right]);
+  const y = d3.scaleLinear(y0.domain(), [H - bottom - 8, top]);
+  svg.append('g').attr('class', 'nb-grid-l').attr('transform', `translate(${left},0)`).call(d3.axisLeft(y).tickValues(yt).tickSize(-(W - right - left)).tickFormat(''));
+  unfont(svg.append('g').attr('class', 'nb-axis').attr('transform', `translate(${left},0)`).call(d3.axisLeft(y).tickValues(yt).tickSize(0).tickPadding(6).tickFormat((v) => fmtTick(v)))).select('.domain').remove();
+  const days = d3.utcDay.count(x.domain()[0], x.domain()[1]) + 1;
+  let xt = x.ticks(Math.max(2, Math.min(days, Math.floor((W - left - right) / 70)))).filter((d) => +d3.utcDay.floor(d) === +d);
+  if (xt.length < 2) xt = x.domain();
+  unfont(svg.append('g').attr('class', 'nb-axis').attr('transform', `translate(0,${H - bottom})`).call(d3.axisBottom(x).tickValues(xt).tickFormat(fmtDay).tickSizeOuter(0).tickSize(4)));
+  const line = d3.line().x((p) => x(p.date)).y((p) => y(p.rating));
+  svg.append('line').attr('x1', left).attr('x2', W - right).attr('y1', y(0)).attr('y2', y(0)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.25).attr('stroke-dasharray', '4 3');
+  svg.append('text').attr('x', left + 4).attr('y', y(0) - 4).attr('font-size', 10).attr('fill', 'var(--color-fg-muted)').text('D1 average');
+  // conference-mates in their own colours, faint; this team in its colour on top
+  const others = d3.groups(rows.filter((r) => r.abbr !== t.abbr), (r) => r.abbr);
+  svg.append('g').attr('fill', 'none').selectAll('path').data(others).join('path')
+    .attr('d', ([, p]) => line(p.sort((a, b) => a.date - b.date))).attr('stroke', ([a]) => teamInkMin(tmap.get(a))).attr('stroke-opacity', 0.3).attr('stroke-width', 1.1);
+  const ink = teamInk(t);
+  svg.append('path').attr('d', line(mine)).attr('fill', 'none').attr('stroke', ink).attr('stroke-width', 2.5).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+  svg.append('g').selectAll('circle').data(mine).join('circle').attr('cx', (p) => x(p.date)).attr('cy', (p) => y(p.rating)).attr('r', 3).attr('fill', ink).attr('stroke', 'var(--color-panel)').attr('stroke-width', 1.5);
+  svg.append('text').attr('x', x(mine.at(-1).date) + 7).attr('y', y(mine.at(-1).rating) + 4).attr('font-size', 11).attr('font-weight', 650).attr('fill', teamInkMin(t, 4.5)).text(endLab);
+  const hover = svg.append('circle').attr('r', 5).attr('fill', 'none').attr('stroke', ink).attr('stroke-width', 2).attr('opacity', 0);
+  svg.append('rect').attr('x', left).attr('y', top).attr('width', W - left - right).attr('height', H - top - bottom).attr('fill', 'transparent')
+    .on('pointermove', (e) => {
+      const [mx] = d3.pointer(e, svg.node());
+      const i = d3.leastIndex(mine, (p) => Math.abs(x(p.date) - mx));
+      const p = mine[i]; if (!p) return;
+      hover.attr('cx', x(p.date)).attr('cy', y(p.rating)).attr('opacity', 1);
+      showTip(e, [fmtDow(p.date), ['Rating', fmtR(p.rating)], i ? ['Change', signed(p.rating - mine[i - 1].rating, 2)] : ['', 'Preseason prior']]);
+    }).on('pointerleave', () => { hover.attr('opacity', 0); hideTip(); });
+}
+
+const oppCell = (g, tmap, logos) => {
+  const c = td(''), t = isOne(g.opp_d1) ? tmap.get(g.opp) : null;
+  if (t) { c.append(teamTag(logos, t, code(t)), el('span', 'orank', String(N(t.rank)))); c.title = `${t.name} · ${ordinal(t.rank)}`; }
+  else c.append(ndTag(g.opp_name || g.opp));
+  return c;
+};
+function drawTeamSchedule(t, tmap, logos) {
+  const slateBox = document.getElementById('team-slate');
+  const resBody = document.querySelector('#team-results tbody');
+  const leftBody = document.querySelector('#team-left tbody');
+  const s = state('schedule');
+  if (s !== 'ok') { if (s === 'error') { failed(slateBox); failRow(resBody, 7, 120); failRow(leftBody, 6, 120); } else { slateBox.replaceChildren(); pending(slateBox); pending(resBody); pending(leftBody); } return; }
+  const games = (OK('team_games') ? dash.data('team_games').data : []).filter((g) => g.abbr === t.abbr).map((g) => ({ ...g, st: ST(g.status) }))
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.tip).localeCompare(String(b.tip)));
+  const done = games.filter((g) => g.st === 'final');
+  const left = games.filter((g) => (g.st === 'scheduled' || g.st === 'live') && String(g.date) >= todayET());
+  const key = (g) => encodeURIComponent(g.id) + ',' + encodeURIComponent(g.abbr);
+  ready(resBody);
+  if (!done.length) failRow(resBody, 7, 60, 'No games played yet.', 'muted');
+  else resBody.replaceChildren(...[...done].reverse().map((g) => {
+    const tr = el('tr'); tr.dataset.key = key(g);
+    tr.append(td(fmtDay(parseDay(g.date)), 'muted'), td(g.ha, 'muted'), oppCell(g, tmap, logos), td(g.result, 'nb-wl ' + (g.result === 'W' ? 'w' : 'l')), td(g.score, 'num'),
+      td(fmtP(g.p_win), 'num muted nb-hide-xs'), td(g.delta === null ? '' : signed(g.delta, 2), 'num ' + tone(g.delta, 2)));
+    return tr;
+  }));
+  ready(leftBody);
+  if (!left.length) failRow(leftBody, 6, 60, 'No games left.', 'muted');
+  else leftBody.replaceChildren(...left.map((g) => {
+    const tr = el('tr'); tr.dataset.key = key(g);
+    tr.append(td(fmtDow(parseDay(g.date)), 'muted'), g.st === 'live' ? td('Live', 'nb-live nb-hide-xs') : td(fmtTip(g.tip) || 'TBA', 'muted mono nb-hide-xs'), td(g.ha, 'muted'), oppCell(g, tmap, logos),
+      td(fmtP(g.p_win), 'num' + (g.p_win >= 0.5 ? ' nb-best' : '')), td(fmtSpread(g.spread), 'num'));
+    return tr;
+  }));
+  drawTeamSlate(slateBox, left, tmap);
+}
+
+function drawTeamSlate(box, left, tmap) {
+  ready(box); box.replaceChildren();
+  if (!left.length) { box.append(el('p', 'nb-empty-note', 'No games left.')); return; }
+  const W = box.clientWidth, H = 150, top = 8, bottom = 20;
+  const svg = newSvg(box, W, H, 'Win chance in each remaining game');
+  const yt = [0, 0.5, 1];
+  const lm = measure(svg, yt.map(d3.format('.0%')), 10.5) + 8;
+  const x = d3.scaleBand(d3.range(left.length), [lm, W - 2]).paddingInner(left.length > 40 ? 0.2 : 0.25);
+  const y = d3.scaleLinear([0, 1], [H - bottom, top]);
+  svg.append('g').attr('class', 'nb-grid-l').attr('transform', `translate(${lm},0)`).call(d3.axisLeft(y).tickValues(yt).tickSize(-(W - 2 - lm)).tickFormat(''));
+  unfont(svg.append('g').attr('class', 'nb-axis').attr('transform', `translate(${lm},0)`).call(d3.axisLeft(y).tickValues(yt).tickSize(0).tickPadding(5).tickFormat(d3.format('.0%')))).select('.domain').remove();
+  const pw = (g) => (g.p_win === null ? 0.5 : g.p_win);  // an undecided bracket game: a muted coin flip
+  svg.append('g').selectAll('rect').data(left).join('rect').attr('x', (g, i) => x(i)).attr('width', x.bandwidth()).attr('y', (g) => y(pw(g))).attr('height', (g) => Math.max(0.5, y(0) - y(pw(g))))
+    .attr('rx', Math.min(2, x.bandwidth() / 2)).attr('fill', (g) => (g.p_win === null ? 'var(--cds-chart-muted)' : 'var(--cds-chart-categorical-1)')).attr('fill-opacity', (g) => (g.ha === '@' ? 0.32 : g.ha === 'N' ? 0.58 : 0.85));
+  svg.append('line').attr('x1', lm).attr('x2', W - 2).attr('y1', y(0.5)).attr('y2', y(0.5)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '3 2');
+  // 5-game average, centred
+  const roll = left.map((g, i) => { const a = left.slice(Math.max(0, i - 2), i + 3); return { i, v: d3.mean(a, pw) }; });
+  svg.append('path').attr('d', d3.line().x((d) => x(d.i) + x.bandwidth() / 2).y((d) => y(d.v))(roll)).attr('fill', 'none').attr('stroke', 'var(--color-fg)').attr('stroke-width', 1.75).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+  // month labels at each month's first game, dropped where they would meet
+  const months = []; let lastM = '', lastX = -Infinity;
+  left.forEach((g, i) => { const m = String(g.date).slice(0, 7); if (m !== lastM) { lastM = m; const px = x(i); if (px - lastX >= 30) { months.push({ px, d: parseDay(g.date) }); lastX = px; } } });
+  const mg = svg.append('g');
+  months.forEach(({ px, d }) => {
+    mg.append('line').attr('x1', px).attr('x2', px).attr('y1', H - bottom).attr('y2', H - bottom + 4).attr('stroke', 'var(--cds-chart-axis)');
+    mg.append('text').attr('x', px).attr('y', H - 5).attr('font-size', 10).attr('fill', 'var(--color-fg-muted)').text(fmtMon(d));
+  });
+  svg.append('g').selectAll('rect').data(left).join('rect').attr('x', (g, i) => x(i) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', top).attr('height', H - top - bottom).attr('fill', 'transparent')
+    .on('pointermove', (e, g) => { const o = isOne(g.opp_d1) ? tmap.get(g.opp) : null; showTip(e, [fmtDow(parseDay(g.date)), [`${g.ha} ${o ? o.name : g.opp_name || g.opp}`, ''], ['Win chance', fmtP(g.p_win)], ...(fmtSpread(g.spread) ? [['Spread', fmtSpread(g.spread)]] : [])]); })
+    .on('pointerleave', hideTip);
+}
+
+// ---------- 5. model ----------
+function simpleTable(tableId, ids, build) {
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  if (!tableState(tbody, 8, ids, 120)) return;
+  tbody.replaceChildren(...build());
+}
+function drawModel() {
+  simpleTable('params-core', ['params'], () => dash.data('params').data.filter((p) => p.group === 'core').map((p) => {
+    const tr = el('tr'); tr.dataset.key = p.key;
+    tr.append(td(p.label), td(fmtVal(p.value), 'num'), td(p.unit, 'muted'), td(p.note, 'muted note nb-hide-xs'));
+    return tr;
+  }));
+  simpleTable('params-factors', ['params'], () => dash.data('params').data.filter((p) => p.group === 'factor')
+    .sort((a, b) => (N(b.kept) - N(a.kept)) || (N(a.d_logloss) - N(b.d_logloss)))
+    .map((p) => {
+      const tr = el('tr'); tr.dataset.key = p.key;
+      const kept = String(p.kept) === '1';
+      const delta = (v) => td(Number.isFinite(v) ? (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v).toFixed(6) : '', 'num ' + (v < 0 ? 'up' : v > 0 ? 'down' : 'muted'));
+      tr.append(td(p.label), td(fmtVal(p.value), 'num'), td(p.unit, 'muted nb-hide-xs'), td(kept ? 'Kept' : 'Dropped', kept ? '' : 'muted'),
+        delta(N(p.d_logloss)), td(p.folds ? `${p.seasons_better} of ${p.folds}` : '', 'num muted nb-hide-xs'), delta(N(p.d_test)));
+      return tr;
+    }));
+  const facs = state('params') === 'ok' ? dash.data('params').data.filter((p) => p.group === 'factor') : [];
+  const lc = (s) => (/^[A-Z][a-z]/.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s);  // "Travel distance" -> "travel distance", "NCAA …" stays
+  const names = (k) => [...new Set(facs.filter((p) => String(p.kept) === k).map((p) => lc(String(p.note || p.label))))].join(', ') || 'none';
+  document.getElementById('ctx-kept').textContent = facs.length ? names('1') : '—';
+  document.getElementById('ctx-dropped').textContent = facs.length ? names('0') : '—';
+  const pb = OK('priors') ? dash.data('priors').data.reduce((a, b) => (a && N(a.logloss) <= N(b.logloss) ? a : b), null) : null;
+  document.getElementById('prior-best').textContent = pb ? String(pb.prior).charAt(0).toLowerCase() + String(pb.prior).slice(1) : '—';
+  simpleTable('priors-table', ['priors'], () => {
+    const rows = dash.data('priors').data.slice().sort((a, b) => N(a.logloss) - N(b.logloss));
+    const best = d3.min(rows, (r) => N(r.logloss)), dmax = d3.max(rows, (r) => N(r.d_logloss)) || 1;
+    return rows.map((r) => {
+      const tr = el('tr'); tr.dataset.key = r.prior;
+      const d = N(r.d_logloss), top = N(r.logloss) === best;
+      const name = td(r.prior, top ? 'nb-best' : '');
+      const dc = td('', 'num'), wrap = el('span', 'nb-vcell'), bar = el('span', 'nb-vbar'), b = el('i');  // how far behind the best, drawn
+      b.style.width = (Math.max(0, d) / dmax * 100) + '%'; bar.append(b);
+      wrap.append(el('span', d > 0 ? 'down' : 'muted', Number.isFinite(d) ? (d > 0 ? '+' + d.toFixed(4) : d < 0 ? MINUS + Math.abs(d).toFixed(4) : 'best') : ''), bar); dc.append(wrap);
+      tr.append(name, td(r.seasons || '', 'muted nb-hide-xs'), td(Number.isFinite(N(r.games)) ? comma(N(r.games)) : '', 'num muted nb-hide-xs'),
+        td(Number.isFinite(N(r.logloss)) ? N(r.logloss).toFixed(4) : '', 'num' + (top ? ' nb-best' : '')), dc, td(r.note || '', 'muted note nb-hide-sm'));
+      return tr;
+    });
+  });
+  simpleTable('backtest-table', ['backtest'], () => {
+    const rows = dash.data('backtest').data;
+    const best = {};
+    ['logloss', 'brier'].forEach((m) => d3.groups(rows, (r) => r.split).forEach(([sp, rs]) => { best[sp + m] = d3.min(rs, (r) => N(r[m])); }));
+    d3.groups(rows, (r) => r.split).forEach(([sp, rs]) => { best[sp + 'acc'] = d3.max(rs, (r) => N(r.acc)); });
+    const order = (sp) => (sp === 'test' ? 0 : 1);
+    return [...rows].sort((a, b) => order(a.split) - order(b.split) || N(a.logloss) - N(b.logloss)).map((r) => {
+      const tr = el('tr'); tr.dataset.key = encodeURIComponent(r.model) + ',' + encodeURIComponent(r.split);
+      const b = (m) => (N(r[m]) === best[r.split + m] ? ' nb-best' : '');
+      tr.append(td(r.model, r.model === 'This model' ? 'nb-best' : ''), td(r.split, 'muted'), td(r.seasons || '', 'muted nb-hide-xs'), td(comma(N(r.games)), 'num muted nb-hide-xs'),
+        td(N(r.logloss).toFixed(4), 'num' + b('logloss')), td(N(r.brier).toFixed(4), 'num' + b('brier')), td(fmtP(r.acc), 'num' + b('acc')));
+      return tr;
+    });
+  });
+  drawCalibration();
+}
+function drawCalibration() {
+  const box = document.getElementById('calibration-chart');
+  if (!boxState(box, 'calibration')) return;
+  const rows = dash.data('calibration').data.map((r) => ({ bin: r.bin, p: N(r.p_mean), a: N(r.actual), n: N(r.n) })).filter((r) => Number.isFinite(r.p) && Number.isFinite(r.a)).sort((a, b) => a.p - b.p);
+  if (!rows.length) { box.append(el('p', 'nb-empty-note', 'No calibration bins.')); return; }
+  const W = box.clientWidth, H = Math.round(Math.min(380, Math.max(260, W * 0.7)));
+  box.style.minHeight = H + 'px';
+  const svg = newSvg(box, W, H, 'Calibration: predicted against actual');
+  const pf = d3.format('.0%');
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const left = measure(svg, ticks.map(pf), 10.5) + 22, bottom = 38, top = 8, right = 12;
+  const side = Math.min(W - left - right, H - top - bottom);
+  const x = d3.scaleLinear([0, 1], [left, left + side]);
+  const y = d3.scaleLinear([0, 1], [top + side, top]);
+  const r = d3.scaleSqrt([0, d3.max(rows, (d) => d.n) || 1], [0, Math.max(5, side / 28)]);
+  svg.append('g').attr('class', 'nb-grid-l').attr('transform', `translate(${left},0)`).call(d3.axisLeft(y).tickValues(ticks).tickSize(-side).tickFormat(''));
+  unfont(svg.append('g').attr('class', 'nb-axis').attr('transform', `translate(${left},0)`).call(d3.axisLeft(y).tickValues(ticks).tickFormat(pf).tickSize(0).tickPadding(6))).select('.domain').remove();
+  unfont(svg.append('g').attr('class', 'nb-axis').attr('transform', `translate(0,${top + side})`).call(d3.axisBottom(x).tickValues(ticks).tickFormat(pf).tickSize(4).tickSizeOuter(0)));
+  svg.append('text').attr('x', left + side / 2).attr('y', top + side + 32).attr('text-anchor', 'middle').attr('font-size', 10.5).attr('fill', 'var(--color-fg-muted)').text('Predicted home win');
+  svg.append('text').attr('transform', `translate(10,${top + side / 2}) rotate(-90)`).attr('text-anchor', 'middle').attr('font-size', 10.5).attr('fill', 'var(--color-fg-muted)').text('Home won');
+  svg.append('line').attr('x1', x(0)).attr('y1', y(0)).attr('x2', x(1)).attr('y2', y(1)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+  svg.append('path').attr('d', d3.line().x((d) => x(d.p)).y((d) => y(d.a))(rows)).attr('fill', 'none').attr('stroke', 'var(--cds-chart-categorical-1)').attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+  svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', (d) => x(d.p)).attr('cy', (d) => y(d.a)).attr('r', (d) => Math.max(2.5, r(d.n)))
+    .attr('fill', 'var(--cds-chart-categorical-1)').attr('fill-opacity', 0.25).attr('stroke', 'var(--cds-chart-categorical-1)').attr('stroke-width', 1.5)
+    .on('pointerenter', function () { d3.select(this).attr('fill-opacity', 0.6); })
+    .on('pointermove', (e, d) => showTip(e, [`Bin ${d.bin}`, ['Predicted', fmtP(d.p)], ['Actual', fmtP(d.a)], ['Games', comma(d.n)]]))
+    .on('pointerleave', function () { d3.select(this).attr('fill-opacity', 0.25); hideTip(); });
+}
+
+// ---------- draw ----------
+const PAGES = { rankings: drawRankings, tournament: drawTournament, games: drawGames, team: drawTeam, model: drawModel };
+let firstDraw = true;
+function draw() {
+  panelRGB = toRGB(getComputedStyle(document.getElementById('rankings-card')).backgroundColor);
+  root.classList.toggle('nb-dark', lum(panelRGB) < 0.2);  // dark logo variants and stronger row washes on dark panels
+  drawHeader();
+  PAGES[current]();
+  if (firstDraw && OK('teams')) { firstDraw = false; root.querySelectorAll('.nb-page').forEach((p) => p.classList.add('nb-fade')); }
+}
+showTab(current, false);
+dash.onData(draw);
+
+})();</script>
+<script>
+document.querySelector('.theme-toggle').addEventListener('click', () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem('theme', root.dataset.theme); } catch (e) {}
+  dash.setParams({});  // redraw: charts and row inks read the theme's computed colours
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => dash.setParams({}));
+</script>
+</body>
+</html>
