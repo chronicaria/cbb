@@ -127,6 +127,20 @@
 .nb .nb-x-t td.tm .rec { margin-left: 7px; font-family: var(--nb-mono); font-size: 12px; font-weight: 400; letter-spacing: 0; color: var(--x-mute); }
 .nb .nb-x-t td.n { font-family: var(--nb-mono); font-size: 13px; color: #f4f5f7; border-left: 1px solid var(--x-hair); }
 .nb .nb-x-t td.n.pos { color: #6fe39a; } .nb .nb-x-t td.n.neg { color: #ff8189; }
+/* Top 25 graphic: a 5 x 5 grid of team tiles on the same dark board (public site only: it needs the large logos) */
+.nb .nb-t25 { position: fixed; left: -100000px; top: 0; box-sizing: border-box; width: 660px; padding: 30px 24px 18px; background: #0d0f13; color: #eceef1; font-family: var(--nb-sans); }
+.nb .nb-t25-h { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 20px; }
+.nb .nb-t25-h b { font-size: 54px; line-height: .9; font-weight: 800; letter-spacing: -.02em; }
+.nb .nb-t25-sub { text-align: right; font-size: 14px; line-height: 1.3; font-weight: 650; }
+.nb .nb-t25-sub span { display: block; font-family: var(--nb-mono); font-size: 11.5px; font-weight: 400; color: #8d939e; }
+.nb .nb-t25-g { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.nb .nb-t25-c { position: relative; display: flex; flex-direction: column; align-items: center; height: 138px; box-sizing: border-box; padding: 21px 5px 8px; border-radius: 6px; background: color-mix(in srgb, var(--tc, transparent) 34%, #14171d); }
+.nb .nb-t25-c i { position: absolute; left: 8px; top: 6px; font: 700 13px var(--nb-mono); color: #fff; }
+.nb .nb-t25-c img { width: 62px; height: 62px; max-width: none; object-fit: contain; display: block; }
+.nb .nb-t25-c em { margin-top: auto; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-style: normal; font-size: 12px; font-weight: 650; }
+.nb .nb-t25-c u { text-decoration: none; font: 700 15px/1.25 var(--nb-mono); font-variant-numeric: tabular-nums; }
+.nb .nb-t25-f { display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; font-family: var(--nb-mono); font-size: 10.5px; color: #8d939e; }
+.nb .nb-t25-f span:last-child { text-align: right; }
 .nb .nb-rk-wrap { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }
 .nb .nb-rk { table-layout: fixed; font-size: 12px; }
 .nb .nb-rk th, .nb .nb-rk td { padding: 0 4px; }
@@ -460,6 +474,7 @@
           <input class="nb-search" id="team-search" type="search" placeholder="Find a team" list="team-list" aria-label="Find a team" autocomplete="off" spellcheck="false">
           <datalist id="team-list"></datalist>
           <button class="nb-png" id="rk-png" title="Download this view as a PNG">PNG</button>
+          <button class="nb-png" id="rk-t25" title="Download the Top 25 as a PNG graphic" hidden>Top 25</button>
         </div>
       </div>
       <div class="nb-rk-wrap halves" id="rankings-wrap" data-source="logos">
@@ -1224,23 +1239,45 @@ function exportCard() {
   card.append(wrap);
   return card;
 }
-document.getElementById('rk-png').addEventListener('click', async (e) => {
-  const btn = e.currentTarget;
-  if (!OK('teams')) return;
-  const day = OK('run') ? new Date(dash.data('run').data[0].as_of) : new Date();
-  const stamp = isNaN(day) ? todayET() : etDay.format(day);
-  const teams = dash.data('teams').data, view = rkView();
-  const tag = view === 'conf' ? '-' + rkConf(confList(teams)).toLowerCase().replace(/[^a-z0-9]+/g, '-') : rkPage(teams.length) ? `-${rkPage(teams.length) * PER + 1}` : '';
+// the Top 25 graphic: always ranks 1-25, whatever the table's view, page or sort
+function top25Card(day) {
+  const logos = new Map(dash.data('logos').data.map((l) => [l.abbr, asset(l.xl || l.dark || l.src)]));
+  const card = el('div', 'nb-t25'), head = el('div', 'nb-t25-h'), sub = el('div', 'nb-t25-sub', "Men's college basketball");
+  sub.append(el('span', '', new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' }).format(day)));
+  head.append(el('b', '', 'Top 25'), sub);
+  const grid = el('div', 'nb-t25-g');
+  [...dash.data('teams').data].sort((a, b) => N(a.rank) - N(b.rank)).slice(0, 25).forEach((t) => {
+    const c = el('div', 'nb-t25-c'), img = el('img'); c.style.setProperty('--tc', hex(t.color) || 'transparent');
+    img.alt = ''; const src = logos.get(t.abbr); if (src) img.src = src;
+    c.append(el('i', '', String(N(t.rank))), img, el('em', '', t.short || t.name), el('u', '', fmtR(N(t.rating))));
+    grid.append(c);
+  });
+  const foot = el('div', 'nb-t25-f');
+  foot.append(el('span', '', 'Rating = points vs. an average D1 team'), el('span', '', 'chronicaria.github.io/cbb'));
+  card.append(head, grid, foot);
+  return card;
+}
+const runDay = () => { const d = OK('run') ? new Date(dash.data('run').data[0].as_of) : new Date(); return isNaN(d) ? new Date() : d; };
+async function savePng(btn, card, name) {
   btn.disabled = true;
-  const card = exportCard();
   root.append(card);
   try {
     await Promise.all([...card.querySelectorAll('img')].map((i) => (i.src ? i.decode().catch(() => {}) : null)));
     const { toPng } = await import('https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/+esm');
     const url = await toPng(card, { pixelRatio: 2, backgroundColor: '#0d0f13', width: card.offsetWidth, height: card.offsetHeight, style: { position: 'static', left: '0', top: '0' } });
-    const a = el('a'); a.href = url; a.download = `cbb-power-rankings-${stamp}${tag}.png`; a.click();
+    const a = el('a'); a.href = url; a.download = name; a.click();
   } catch (err) { console.error('PNG export failed', err); btn.textContent = 'PNG failed'; }
   finally { card.remove(); btn.disabled = false; }
+}
+document.getElementById('rk-png').addEventListener('click', (e) => {
+  if (!OK('teams')) return;
+  const teams = dash.data('teams').data, view = rkView();
+  const tag = view === 'conf' ? '-' + rkConf(confList(teams)).toLowerCase().replace(/[^a-z0-9]+/g, '-') : rkPage(teams.length) ? `-${rkPage(teams.length) * PER + 1}` : '';
+  savePng(e.currentTarget, exportCard(), `cbb-power-rankings-${etDay.format(runDay())}${tag}.png`);
+});
+document.getElementById('rk-t25').hidden = !PUBLIC;
+document.getElementById('rk-t25').addEventListener('click', (e) => {
+  if (OK('teams') && OK('logos')) savePng(e.currentTarget, top25Card(runDay()), `cbb-top-25-${etDay.format(runDay())}.png`);
 });
 
 // ---------- 2. tournament ----------
