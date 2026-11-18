@@ -995,7 +995,7 @@ id,date,tip,home,away,home_name,away_name,home_d1,away_d1,status,hs,as,p_home,sp
 401928843,2026-11-18,2026-11-19T00:00Z,M-OH,190,Miami (OH),Defiance,1,0,scheduled,,,0.996,,,0,0,,
 401929014,2026-11-18,2026-11-19T00:00Z,NHVN,343,New Haven,MCLA,1,0,scheduled,,,0.951,,,0,0,,
 401909526,2026-11-18,2026-11-19T00:30Z,MARQ,NIU,Marquette,Northern Illinois,1,1,scheduled,,,0.965,-21.5,,0,0,,
-401920515,2026-11-18,2026-11-19T00:30Z,WVU,KU,West Virginia,Kansas,1,1,scheduled,,,0.228,7.9,,1,1,,Players Era 8
+401920515,2026-11-18,2026-11-19T00:30Z,WVU,KU,West Virginia,Kansas,1,1,scheduled,,,0.228,7.9,,1,0,,Players Era 8
 401920751,2026-11-18,2026-11-19T00:30Z,CIN,YSU,Cincinnati,Youngstown State,1,1,scheduled,,,0.969,-22.3,,0,0,,
 401920761,2026-11-18,2026-11-19T00:30Z,BEL,2841,Belmont,Union Commonwealth (KY),1,0,scheduled,,,0.994,,,0,0,,
 401921134,2026-11-18,2026-11-19T00:30Z,TTU,NOLA,Texas Tech,LSU New Orleans,1,1,scheduled,,,0.982,-25.8,,0,0,,
